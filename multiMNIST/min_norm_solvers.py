@@ -1,7 +1,7 @@
 # This code is from
 # Multi-Task Learning as Multi-Objective Optimization
 # Ozan Sener, Vladlen Koltun
-# Neural Information Processing Systems (NeurIPS) 2018 
+# Neural Information Processing Systems (NeurIPS) 2018
 # https://github.com/intel-isl/MultiObjectiveOptimization
 
 import numpy as np
@@ -41,7 +41,7 @@ class MinNormSolver:
         This is correct only in 2D
         ie. min_c |\sum c_i x_i|_2^2 st. \sum c_i = 1 , 1 >= c_1 >= 0 for all i, c_i + c_j = 1.0 for some i, j
         """
-        dmin = 1e8
+        dmin = float("inf")
         for i in range(len(vecs)):
             for j in range(i+1,len(vecs)):
                 if (i,j) not in dps:
@@ -54,7 +54,7 @@ class MinNormSolver:
                     for k in range(len(vecs[i])):
                         dps[(i,i)] += torch.dot(vecs[i][k], vecs[i][k]).item()#torch.dot(vecs[i][k], vecs[i][k]).data[0]
                 if (j,j) not in dps:
-                    dps[(j, j)] = 0.0   
+                    dps[(j, j)] = 0.0
                     for k in range(len(vecs[i])):
                         dps[(j, j)] += torch.dot(vecs[j][k], vecs[j][k]).item()#torch.dot(vecs[j][k], vecs[j][k]).data[0]
                 c,d = MinNormSolver._min_norm_element_from2(dps[(i,i)], dps[(i,j)], dps[(j,j)])
@@ -78,12 +78,12 @@ class MinNormSolver:
                 tmax_f = tmax
                 break
         return np.maximum(y - tmax_f, np.zeros(y.shape))
-    
+
     def _next_point(cur_val, grad, n):
         proj_grad = grad - ( np.sum(grad) / n )
         tm1 = -1.0*cur_val[proj_grad<0]/proj_grad[proj_grad<0]
         tm2 = (1.0 - cur_val[proj_grad>0])/(proj_grad[proj_grad>0])
-        
+
         skippers = np.sum(tm1<1e-7) + np.sum(tm2<1e-7)
         t = 1
         if len(tm1[tm1>1e-7]) > 0:
@@ -105,7 +105,7 @@ class MinNormSolver:
         # Solution lying at the combination of two points
         dps = {}
         init_sol, dps = MinNormSolver._min_norm_2d(vecs, dps)
-        
+
         n=len(vecs)
         sol_vec = np.zeros(n)
         sol_vec[init_sol[0][0]] = init_sol[1]
@@ -114,14 +114,14 @@ class MinNormSolver:
         if n < 3:
             # This is optimal for n=2, so return the solution
             return sol_vec , init_sol[2]
-    
+
         iter_count = 0
 
         grad_mat = np.zeros((n,n))
         for i in range(n):
             for j in range(n):
                 grad_mat[i,j] = dps[(i, j)]
-                
+
 
         while iter_count < MinNormSolver.MAX_ITER:
             grad_dir = -1.0*np.dot(grad_mat, sol_vec)

@@ -6,7 +6,6 @@ import torch.utils.data
 from torch.autograd import Variable
 
 from model_lenet import RegressionModel, RegressionTrain
-from model_resnet import MnistResNet, RegressionTrainResNet
 
 from time import time
 import pickle
@@ -93,7 +92,7 @@ def train(dataset, base_model, niter, j):
     # -----
     for t in range(niter):
 
-        scheduler.step()
+        # scheduler.step()
         n_manual_adjusts = 0
         model.train()
         for (it, batch) in enumerate(train_loader):
@@ -157,23 +156,11 @@ def train(dataset, base_model, niter, j):
                 #     t + 1, niter, weights[-1], task_train_losses[-1], train_accs[-1]))
     # torch.save(model.model.state_dict(), './saved_model/%s_%s_niter_%d.pickle' %
     #            (dataset, base_model, niter, npref))
-    torch.save(model.model.state_dict(),
-               f'./saved_model/{dataset}_{base_model}_niter_{niter}.pickle')
 
     result = {"training_losses": task_train_losses,
               "training_accuracies": train_accs}
 
-    return result
-
-
-def circle_points(K, min_angle=None, max_angle=None):
-    # generate evenly distributed preference vector
-    ang0 = np.pi / 20. if min_angle is None else min_angle
-    ang1 = np.pi * 9 / 20. if max_angle is None else max_angle
-    angles = np.linspace(ang0, ang1, K)
-    x = np.cos(angles)
-    y = np.sin(angles)
-    return np.c_[x, y]
+    return result, model
 
 
 def run(dataset='mnist', base_model='lenet', niter=100):
@@ -185,8 +172,8 @@ def run(dataset='mnist', base_model='lenet', niter=100):
     out_file_prefix = f"indiv_{dataset}_{base_model}_{niter}"
     for j in range(2):
         s_t = time()
-        res = train(dataset, base_model, niter, j)
-        results[j] = {"r": np.array([1 - j, j]), "res": res}
+        res, model = train(dataset, base_model, niter, j)
+        results[j] = {"r": np.array([1 - j, j]), "res": res, "checkpoint": model.model.state_dict()}
         print(f"**** Time taken for {dataset}_{j} = {time() - s_t}")
 
     results_file = os.path.join("results", out_file_prefix + ".pkl")
@@ -194,10 +181,10 @@ def run(dataset='mnist', base_model='lenet', niter=100):
     print(f"**** Time taken for {dataset} = {time() - start_time}")
 
 
-run(dataset='mnist', base_model='lenet', niter=100)
-run(dataset='fashion', base_model='lenet', niter=100)
-run(dataset='fashion_and_mnist', base_model='lenet', niter=100)
-
-# run(dataset = 'mnist', base_model = 'resnet18', niter = 20, npref = 5)
-# run(dataset = 'fashion', base_model = 'resnet18', niter = 20, npref = 5)
-# run(dataset = 'fashion_and_mnist', base_model = 'resnet18', niter = 20, npref = 5)
+if __name__ == "__main__":
+    run(dataset='mnist', base_model='lenet', niter=100)
+    run(dataset='fashion', base_model='lenet', niter=100)
+    run(dataset='fashion_and_mnist', base_model='lenet', niter=100)
+    # run(dataset = 'mnist', base_model = 'resnet18', niter = 20, npref = 5)
+    # run(dataset = 'fashion', base_model = 'resnet18', niter = 20, npref = 5)
+    # run(dataset = 'fashion_and_mnist', base_model = 'resnet18', niter = 20, npref = 5)

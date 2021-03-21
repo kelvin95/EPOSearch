@@ -73,3 +73,9 @@ class RegressionModel(torch.nn.Module):
             outs.append(layer(x))
 
         return torch.stack(outs, dim=1)
+
+    def get_shared_parameters(self):
+        return {k: v for k, v in self.named_parameters() if "task" not in k}
+
+    def get_task_parameters(self, task):
+        return {k: v for k, v in self.named_parameters() if f"task_{task}" in k}

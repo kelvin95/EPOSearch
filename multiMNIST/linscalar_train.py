@@ -6,7 +6,6 @@ import torch.utils.data
 from torch.autograd import Variable
 
 from model_lenet import RegressionModel, RegressionTrain
-from model_resnet import MnistResNet, RegressionTrainResNet
 
 from time import time
 import pickle
@@ -62,7 +61,7 @@ def train(dataset, base_model, niter, preference):
         model = RegressionTrain(RegressionModel(n_tasks), preference)
     if base_model == 'resnet18':
         model = RegressionTrainResNet(MnistResNet(n_tasks), preference)
-    model.randomize()
+    # model.randomize()
     if torch.cuda.is_available():
         model.cuda()
     # ---------***---------
@@ -135,8 +134,8 @@ def train(dataset, base_model, niter, preference):
                     correct1_train += output1.eq(ts[:, 0].view_as(output1)).sum().item()
                     correct2_train += output2.eq(ts[:, 1].view_as(output2)).sum().item()
 
-                train_acc = np.stack([1.0 * correct1_train / len(train_loader.dataset),
-                                      1.0 * correct2_train / len(train_loader.dataset)])
+                train_acc = np.stack([1.0 * correct1_train / len(test_loader.dataset),
+                                      1.0 * correct2_train / len(test_loader.dataset)])
 
                 total_train_loss = torch.stack(total_train_loss)
                 average_train_loss = torch.mean(total_train_loss, dim=0)
@@ -150,13 +149,10 @@ def train(dataset, base_model, niter, preference):
                 print('{}/{}: train_loss={}, train_acc={}'.format(
                     t + 1, niter, task_train_losses[-1], train_accs[-1]))
 
-    torch.save(model.model.state_dict(),
-               f'./saved_model/{dataset}_{base_model}_niter_{niter}.pickle')
-
     result = {"training_losses": task_train_losses,
               "training_accuracies": train_accs}
 
-    return result
+    return result, model
 
 
 def circle_points(K, min_angle=None, max_angle=None):
@@ -180,8 +176,8 @@ def run(dataset='mnist', base_model='lenet', niter=100, npref=5):
     out_file_prefix = f"linscalar_{dataset}_{base_model}_{niter}_{npref}_from_0-"
     for i, pref in enumerate(preferences[::-1]):
         s_t = time()
-        res = train(dataset, base_model, niter, pref)
-        results[i] = {"r": pref, "res": res}
+        res, model = train(dataset, base_model, niter, pref)
+        results[i] = {"r": pref, "res": res, "checkpoint": model.model.state_dict()}
         print(f"**** Time taken for {dataset}_{i} = {time() - s_t}")
         results_file = os.path.join("results", out_file_prefix + f"{i}.pkl")
         pickle.dump(results, open(results_file, "wb"))
@@ -189,10 +185,10 @@ def run(dataset='mnist', base_model='lenet', niter=100, npref=5):
     print(f"**** Time taken for {dataset} = {time() - start_time}")
 
 
-run(dataset='mnist', base_model='lenet', niter=100, npref=5)
-run(dataset='fashion', base_model='lenet', niter=100, npref=5)
-run(dataset='fashion_and_mnist', base_model='lenet', niter=100, npref=5)
-
-# run(dataset = 'mnist', base_model = 'resnet18', niter = 20, npref = 5)
-# run(dataset = 'fashion', base_model = 'resnet18', niter = 20, npref = 5)
-# run(dataset = 'fashion_and_mnist', base_model = 'resnet18', niter = 20, npref = 5)
+if __name__ == "__main__":
+    run(dataset='mnist', base_model='lenet', niter=100, npref=5)
+    run(dataset='fashion', base_model='lenet', niter=100, npref=5)
+    run(dataset='fashion_and_mnist', base_model='lenet', niter=100, npref=5)
+    # run(dataset = 'mnist', base_model = 'resnet18', niter = 20, npref = 5)
+    # run(dataset = 'fashion', base_model = 'resnet18', niter = 20, npref = 5)
+    # run(dataset = 'fashion_and_mnist', base_model = 'resnet18', niter = 20, npref = 5)
