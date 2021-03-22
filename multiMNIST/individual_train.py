@@ -136,8 +136,8 @@ def train(dataset, base_model, niter, j):
                     correct1_train += output1.eq(ts[:, 0].view_as(output1)).sum().item()
                     correct2_train += output2.eq(ts[:, 1].view_as(output2)).sum().item()
 
-                train_acc = np.stack([1.0 * correct1_train / len(train_loader.dataset),
-                                      1.0 * correct2_train / len(train_loader.dataset)])
+                train_acc = np.stack([1.0 * correct1_train / len(test_loader.dataset),
+                                      1.0 * correct2_train / len(test_loader.dataset)])
 
                 total_train_loss = torch.stack(total_train_loss)
                 average_train_loss = torch.mean(total_train_loss, dim=0)

@@ -56,7 +56,7 @@ coverage.xml
 *.pot
 
 # Django stuff:
-*.log
+# *.log
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
@@ -125,8 +125,8 @@ dmypy.json
 .pyre/
 
 # data files
-*.pkl
-*.pickle
+# *.pkl
+# *.pickle
 *.arff
 *.xml
 
