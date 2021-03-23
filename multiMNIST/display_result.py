@@ -7,10 +7,36 @@ from brokenaxes import brokenaxes
 from latex_utils import latexify
 
 baseline = "indiv"
-methods = ["EPO", "PMTL", "LinScalar"]
-markers = {"EPO": "*", "PMTL": "^", "LinScalar": "s", "indiv": "o"}
-msz = {"EPO": 45, "PMTL": 30, "LinScalar": 25, "indiv": "o"}
-datasets = ["mnist", "fashion", "fashion_and_mnist"]
+methods = ["epo", 
+            # "PMTL", 
+            "linscalar",
+            "gradnorm",
+            "graddrop",
+            "itmtl",
+            "mgda",
+            "pcgrad"]
+markers = {"epo": "*", 
+            "pmtl": "^", 
+            "linscalar": "s", 
+            "gradnorm": "v",
+            "graddrop":"1",
+            "itmtl":"p",
+            "mgda":"+",
+            "pcgrad":"D",
+            "indiv": "o"}
+msz = {"epo": 45, 
+        # "PMTL": 30, 
+        "linscalar": 25, 
+        "gradnorm": 30,
+        "graddrop":30,
+        "itmtl":30,
+        "mgda":30,
+        "pcgrad":30,
+        "indiv": "o"}
+datasets = ["mnist", 
+    "fashion", 
+    # "fashion_and_mnist"
+    ]
 model = 'lenet'
 niters, nprefs = 100, 5
 folder = f"results"
@@ -19,7 +45,7 @@ data = dict()
 for dataset in datasets:
     print(dataset)
     data[dataset] = dict()
-    for method in ["EPO", "PMTL", "indiv", "LinScalar"]:
+    for method in [baseline] + methods:
         print(f"\t{method}")
         file_pfx = f"{method}_{dataset}_{model}_{niters}"
         file_sfx = "" if method == 'indiv' else f"_{nprefs}_from_0-{nprefs-1}"
@@ -37,13 +63,13 @@ for dataset in datasets:
         data[dataset][method] = {"last_ls": last_ls,
                                  "last_acs": last_acs,
                                  "rs": rs}
-        if method == "LinScalar":
+        if method == "linscalar":
             data[dataset]["rlens"] = [1.2 * np.linalg.norm(l) for l in last_ls]
             data[dataset]["max1"] = np.max(last_ls, axis=0)
             if dataset == "fashion":
                 print(last_ls)
                 print(data[dataset]["max1"])
-        if method == "EPO":
+        if method == "epo":
             data[dataset]["max2"] = np.max(last_ls, axis=0)
             data[dataset]["rs"] = rs
             if dataset == "fashion":
@@ -63,7 +89,9 @@ for dataset in datasets:
                 data[dataset]["baseline_acc"].append((axs, ays))
 
 
-latexify(fig_width=2.25, fig_height=1.5)
+# latexify(fig_width=2.25, fig_height=1.5)
+from matplotlib import rc
+rc("text", usetex=False)
 for dataset in datasets:
     fig = plt.figure()
     max1x, max1y = data[dataset]["max1"]
@@ -96,16 +124,18 @@ for dataset in datasets:
 
     for method in methods:
         last_ls = data[dataset][method]["last_ls"]
-        s = 40 if method == "EPO" else 30
+        s = 40 if method == "epo" else 30
         ax.scatter(last_ls[:, 0], last_ls[:, 1], marker=markers[method],
-                   c=colors, s=msz[method])  # , label=label)
+                   c=colors, s=msz[method] , label=method)
 
     if dataset == "fashion":
         ax.legend()
 
     fig.savefig(f"figures/{dataset}_loss.pdf")
 
-latexify(fig_width=2.25, fig_height=1.5)
+# latexify(fig_width=2.25, fig_height=1.5)
+from matplotlib import rc
+rc("text", usetex=False)
 for dataset in datasets:
     fig = plt.figure()
     ax = fig.add_subplot(111)
@@ -126,8 +156,8 @@ for dataset in datasets:
 
     for method in methods:
         last_acs = data[dataset][method]["last_acs"]
-        label = method if dataset == "fashion_and_mnist" else ""
-        s = 40 if method == "EPO" else 30
+        label = method #if dataset == "fashion_and_mnist" else ""
+        s = 40 if method == "epo" else 30
         ax.scatter(last_acs[:, 0], last_acs[:, 1], marker=markers[method],
                    c=colors, s=msz[method], label=label)
 
