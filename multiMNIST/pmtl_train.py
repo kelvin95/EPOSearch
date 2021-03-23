@@ -356,10 +356,9 @@ def train(dataset, base_model, niter, npref, init_weight, pref_idx):
                         t + 1, niter,  weights[-1], task_train_losses[-1],train_accs[-1]))
 
 
-    torch.save(model.model.state_dict(), './saved_model/%s_%s_niter_%d_npref_%d_prefidx_%d.pickle'%(dataset, base_model, niter, npref, pref_idx))
     result = {"training_losses": task_train_losses,
               "training_accuracies": train_accs}
-    return result
+    return result, model
 
 
 def run(dataset = 'mnist',base_model = 'lenet', niter = 100, npref = 5):
@@ -375,8 +374,8 @@ def run(dataset = 'mnist',base_model = 'lenet', niter = 100, npref = 5):
     for i, pref in enumerate(preferences):
         s_t = time()
         pref_idx = i
-        res = train(dataset, base_model, niter, npref, init_weight, pref_idx)
-        results[i] = {"r": pref, "res": res}
+        res, model = train(dataset, base_model, niter, npref, init_weight, pref_idx)
+        results[i] = {"r": pref, "res": res, "checkpoint": model.model.state_dict()}
         print(f"**** Time taken for {dataset}_{i} = {time() - s_t}")
         results_file = os.path.join("results", out_file_prefix + f"{i}.pkl")
         pickle.dump(results, open(results_file, "wb"))
