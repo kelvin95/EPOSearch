@@ -1,0 +1,5 @@
+checkpoints/
+*.pickle
+*.zip
+
+fire.sh

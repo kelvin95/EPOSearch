@@ -1,0 +1,21 @@
+numpy
+scipy
+pandas
+autograd
+scikit-learn
+cvxpy
+cvxopt
+matplotlib
+matplotlib-label-lines
+seaborn
+brokenaxes
+
+# torch w/ CUDA 11.1
+# use with -f https://download.pytorch.org/whl/torch_stable.html
+torch==1.8.0+cu111
+torchvision==0.9.0+cu111
+torchaudio==0.8.0
+
+# dev
+ipykernel
+jedi
