@@ -51,10 +51,8 @@ def recover_flattened(flat_grad, indices, shapes):
     return grads
 
 
-def get_d_graddrop(gradients, leak=0., epsilon=1e-7):
-    purity = 0.5 * (1 + (torch.sum(gradients, dim=0) / (torch.sum(torch.abs(gradients), dim=0) + epsilon)))
-    uniform = torch.rand_like(purity)
-    mask = (purity > uniform) * (gradients > 0) + (purity < uniform) * (gradients < 0)
+def get_d_graddrop(gradients, drop_p=0.5, leak=0.):
+    mask = torch.bernoulli(torch.full_like(gradients, drop_p))
     gradients = (leak + (1 - leak) * mask) * gradients
     return torch.sum(gradients, dim=0)
 
@@ -218,8 +216,8 @@ def run(dataset = 'mnist',base_model = 'lenet', niter = 100, npref = 5):
     """
     start_time = time()
     init_weight = np.array([0.5 , 0.5 ])
-    leak = np.arange(0, 1.1, 0.25)
-    out_file_prefix = f"graddrop_{dataset}_{base_model}_{niter}_{npref}_from_0-"
+    leak = np.arange(0.25, 1.1, 0.25)
+    out_file_prefix = f"random_graddrop_{dataset}_{base_model}_{niter}_{npref}_from_0-"
     results = dict()
     for i in range(npref):
         s_t = time()
