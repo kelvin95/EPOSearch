@@ -1,0 +1,157 @@
+Preference Vector = [9.99999988e-01 1.57079632e-04]
+==>>> total trainning batch number: 469
+==>>> total testing batch number: 79
+# params=31912
+	descent=0.0
+1/100: train_loss=[0.9084977 3.4291155], train_acc=[0.6954 0.1501]
+	descent=0.0
+2/100: train_loss=[0.656231  3.5940998], train_acc=[0.78485 0.15525]
+	descent=0.0
+	descent=0.0
+4/100: train_loss=[0.44205293 3.5259721 ], train_acc=[0.85685 0.16705]
+	descent=0.0
+	descent=0.0
+6/100: train_loss=[0.38219887 3.368882  ], train_acc=[0.875   0.18045]
+	descent=0.0
+	descent=0.0
+8/100: train_loss=[0.35920832 3.2392216 ], train_acc=[0.88265 0.1848 ]
+	descent=0.0
+	descent=0.0
+10/100: train_loss=[0.30761257 3.0552804 ], train_acc=[0.90125 0.209  ]
+	descent=0.0
+	descent=0.0
+12/100: train_loss=[0.29309195 2.8287597 ], train_acc=[0.90435 0.23105]
+	descent=0.0
+	descent=0.0
+14/100: train_loss=[0.2804466 2.6444309], train_acc=[0.9096 0.2496]
+	descent=0.0
+	descent=0.0
+16/100: train_loss=[0.30265835 2.5579174 ], train_acc=[0.90215 0.259  ]
+	descent=0.0
+	descent=0.0
+18/100: train_loss=[0.25224954 2.4246545 ], train_acc=[0.92025 0.2826 ]
+	descent=0.0
+	descent=0.0
+20/100: train_loss=[0.23098591 2.3070898 ], train_acc=[0.9268 0.3021]
+	descent=0.0
+	descent=0.0
+22/100: train_loss=[0.2261982 2.1849656], train_acc=[0.9284 0.3193]
+	descent=0.0
+	descent=0.0
+24/100: train_loss=[0.22229123 2.1130648 ], train_acc=[0.9286  0.33725]
+	descent=0.0
+	descent=0.0
+26/100: train_loss=[0.2237166 2.070372 ], train_acc=[0.92955 0.34975]
+	descent=0.0
+	descent=0.0
+28/100: train_loss=[0.22354971 2.0067604 ], train_acc=[0.9296  0.35935]
+	descent=0.0
+	descent=0.0
+30/100: train_loss=[0.21023896 1.9610221 ], train_acc=[0.9326 0.368 ]
+	descent=0.0
+	descent=0.0
+32/100: train_loss=[0.20420565 1.932661  ], train_acc=[0.9363  0.37945]
+	descent=0.0
+	descent=0.0
+34/100: train_loss=[0.20753112 1.8672478 ], train_acc=[0.933   0.39145]
+	descent=0.0
+	descent=0.0
+36/100: train_loss=[0.20071442 1.8476988 ], train_acc=[0.938   0.39625]
+	descent=0.0
+	descent=0.0
+38/100: train_loss=[0.19702922 1.8046389 ], train_acc=[0.93995 0.40935]
+	descent=0.0
+	descent=0.0
+40/100: train_loss=[0.19035584 1.7346201 ], train_acc=[0.9412 0.4244]
+	descent=0.0
+	descent=0.0
+42/100: train_loss=[0.22793286 1.7516551 ], train_acc=[0.9281  0.42445]
+	descent=0.0
+	descent=0.0
+44/100: train_loss=[0.19133762 1.7509179 ], train_acc=[0.94095 0.4229 ]
+	descent=0.0
+	descent=0.0
+46/100: train_loss=[0.1836505 1.6769019], train_acc=[0.9426 0.4365]
+	descent=0.0
+	descent=0.0
+48/100: train_loss=[0.18919563 1.6633204 ], train_acc=[0.9425 0.4423]
+	descent=0.0
+	descent=0.0
+50/100: train_loss=[0.19172442 1.6733251 ], train_acc=[0.94205 0.4361 ]
+	descent=0.0
+	descent=0.0
+52/100: train_loss=[0.1853872 1.6416868], train_acc=[0.9436  0.44485]
+	descent=0.0
+	descent=0.0
+54/100: train_loss=[0.18675105 1.6044497 ], train_acc=[0.94255 0.45685]
+	descent=0.0
+	descent=0.0
+56/100: train_loss=[0.1893771 1.6060599], train_acc=[0.9418 0.456 ]
+	descent=0.0
+	descent=0.0
+58/100: train_loss=[0.18490148 1.5852289 ], train_acc=[0.94395 0.4577 ]
+	descent=0.0
+	descent=0.0
+60/100: train_loss=[0.19014803 1.5656273 ], train_acc=[0.9425 0.4633]
+	descent=0.0
+	descent=0.0
+62/100: train_loss=[0.18967587 1.5607102 ], train_acc=[0.94245 0.467  ]
+	descent=0.0
+	descent=0.0
+64/100: train_loss=[0.19172582 1.5606718 ], train_acc=[0.943   0.46895]
+	descent=0.0
+	descent=0.0
+66/100: train_loss=[0.18359928 1.5398465 ], train_acc=[0.9442 0.4712]
+	descent=0.0
+	descent=0.0
+68/100: train_loss=[0.18649966 1.5223138 ], train_acc=[0.9454 0.4744]
+	descent=0.0
+	descent=0.0
+70/100: train_loss=[0.18429539 1.5039644 ], train_acc=[0.9469 0.4793]
+	descent=0.0
+	descent=0.0
+72/100: train_loss=[0.18366794 1.51076   ], train_acc=[0.94575 0.4799 ]
+	descent=0.0
+	descent=0.0
+74/100: train_loss=[0.19068001 1.5000925 ], train_acc=[0.9442  0.48345]
+	descent=0.0
+	descent=0.0
+76/100: train_loss=[0.18425612 1.4870247 ], train_acc=[0.9451 0.4867]
+	descent=0.0
+	descent=0.0
+78/100: train_loss=[0.18384874 1.4802737 ], train_acc=[0.94635 0.4884 ]
+	descent=0.0
+	descent=0.0
+80/100: train_loss=[0.18931833 1.4728297 ], train_acc=[0.947  0.4861]
+	descent=0.0
+	descent=0.0
+82/100: train_loss=[0.18677093 1.4622957 ], train_acc=[0.94685 0.4894 ]
+	descent=0.0
+	descent=0.0
+84/100: train_loss=[0.19286795 1.4650196 ], train_acc=[0.9455  0.49045]
+	descent=0.0
+	descent=0.0
+86/100: train_loss=[0.194927  1.4470334], train_acc=[0.9447  0.50055]
+	descent=0.0
+	descent=0.0
+88/100: train_loss=[0.18750271 1.4306799 ], train_acc=[0.9461 0.4999]
+	descent=0.0
+	descent=0.0
+90/100: train_loss=[0.193586  1.4267899], train_acc=[0.94485 0.50365]
+	descent=0.0
+	descent=0.0
+92/100: train_loss=[0.18857408 1.4218014 ], train_acc=[0.94565 0.50145]
+	descent=0.0
+	descent=0.0
+94/100: train_loss=[0.19390193 1.4131802 ], train_acc=[0.94675 0.4997 ]
+	descent=0.0
+	descent=0.0
+96/100: train_loss=[0.19242726 1.4103452 ], train_acc=[0.94745 0.5056 ]
+	descent=0.0
+	descent=0.0
+98/100: train_loss=[0.20393172 1.4133066 ], train_acc=[0.94625 0.50615]
+	descent=0.0
+	descent=0.0
+100/100: train_loss=[0.20787305 1.398681  ], train_acc=[0.94215 0.5122 ]
+**** Time taken for fashion_and_mnist_4 = 2489.6177854537964
+**** Time taken for fashion_and_mnist = 2489.6661291122437
