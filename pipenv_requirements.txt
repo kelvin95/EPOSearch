@@ -10,6 +10,10 @@ matplotlib-label-lines
 seaborn
 brokenaxes
 
+# cmdline flags
+absl-py
+fancyflags
+
 # torch w/ CUDA 11.1
 # use with -f https://download.pytorch.org/whl/torch_stable.html
 torch==1.8.0+cu111
