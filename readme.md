@@ -8,6 +8,12 @@ This repository contains code for all the experiments in the ICML 2020 paper
 
 You can get an intuitive understanding of the algorithm from [this video](https://www.youtube.com/watch?v=mgxrjGw6WKU&t=5s).
 
+## Pipenv / Poetry venv
+
+```bash
+sh setup_venv.sh
+```
+
 
 # Citation
 If you find this work useful, please cite our paper.

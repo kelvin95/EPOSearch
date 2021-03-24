@@ -249,4 +249,3 @@ if __name__ == "__main__":
     #run(dataset = 'mnist', base_model = 'resnet18', niter = 20, npref = 5)
     #run(dataset = 'fashion', base_model = 'resnet18', niter = 20, npref = 5)
     #run(dataset = 'fashion_and_mnist', base_model = 'resnet18', niter = 20, npref = 5)
-
