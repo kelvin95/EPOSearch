@@ -10,7 +10,7 @@ from absl import flags
 FLAGS = flags.FLAGS
 
 flags.DEFINE_float("lr", 1e-3, "learning rate", lower_bound=0.0)
-flags.DEFINE_integer("epochs", 1, "number of training epochs", lower_bound=0)
+flags.DEFINE_integer("epochs", 100, "number of training epochs", lower_bound=0)
 flags.DEFINE_integer("n_tasks", 2, "number of tasks", lower_bound=2, upper_bound=2)
 flags.DEFINE_multi_enum(
     "dset",
