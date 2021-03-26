@@ -62,7 +62,7 @@ class EPO(Solver):
             alpha = self.preference / self.preference.sum()
             self.n_manual_adjusts += 1
 
-        if torch.cuda.is_available:
+        if torch.cuda.is_available():
             alpha = self.flags.n_tasks * torch.from_numpy(alpha).cuda()
         else:
             alpha = self.flags.n_tasks * torch.from_numpy(alpha)
