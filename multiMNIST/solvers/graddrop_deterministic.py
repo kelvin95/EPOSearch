@@ -48,18 +48,18 @@ def recover_flattened(flat_grad, indices, shapes):
     return grads
 
 
-def get_d_graddrop(gradients, leak=0.0):
+def get_d_graddrop(gradients, leak=0.0, threshold=0.5):
     purity = 0.5 * (1 + (torch.sum(gradients, dim=0) / torch.sum(torch.abs(gradients), dim=0)))
-    uniform = torch.rand_like(purity)
+    uniform = torch.full_like(purity, threshold)
     mask = (purity > uniform) * (gradients > 0) + (purity < uniform) * (gradients < 0)
     gradients = (leak + (1 - leak) * mask) * gradients
     return torch.sum(gradients, dim=0)
 
 
-class GradDrop(Solver):
+class GradDropDeterministic(Solver):
     @property
     def name(self):
-        return "graddrop"
+        return "graddrop_deterministic"
 
     def update_fn(self, X, ts, model, optimizer):
         # obtain and store the gradient
@@ -74,7 +74,7 @@ class GradDrop(Solver):
         grads = torch.stack(grads)
 
         # calculate the gradient
-        grads = get_d_graddrop(grads, self.leak)
+        grads = get_d_graddrop(grads, self.leak, self.threshold)
         grads = recover_flattened(
             grads, flat_grads[0]["indices"], flat_grads[0]["shapes"]
         )
@@ -87,24 +87,27 @@ class GradDrop(Solver):
         optimizer.step()
 
     def run(self):
-        """Run graddrop"""
+        """Run deterministic graddrop"""
         print(f"**** Now running {self.name} on {self.dataset} ... ")
         start_time = time()
         init_weight = np.array([0.5, 0.5])
         leaks = np.arange(0, 1.1, 0.25)
-        npref = len(leaks)
+        thresholds = np.arange(0.25, 1.1, 0.25)
+        npref = len(leaks) * len(thresholds)
         results = dict()
         for i, leak in enumerate(leaks):
-            s_t = time()
-            self.leak = leak
-            model = RegressionTrain(RegressionModel(self.flags.n_tasks), init_weight)
-            if torch.cuda.is_available():
-                model.cuda()
-            optimizer = torch.optim.SGD(model.parameters(), lr=1e-3, momentum=0.0)
-            res, checkpoint = self.train(model, optimizer)
-            results[i] = {"r": None, "res": res, "checkpoint": checkpoint}
-            t_t = timedelta(seconds=round(time() - s_t))
-            print(f"**** Time taken for {self.dataset}_{i} = {t_t}")
-            self.dump(results, self.prefix + f"_{npref}_from_0-{i}.pkl")
+            for j, threshold in enumerate(thresholds):
+                s_t = time()
+                self.leak = leak
+                self.threshold = threshold
+                model = RegressionTrain(RegressionModel(self.flags.n_tasks), init_weight)
+                if torch.cuda.is_available():
+                    model.cuda()
+                optimizer = torch.optim.SGD(model.parameters(), lr=1e-3, momentum=0.0)
+                res, checkpoint = self.train(model, optimizer)
+                results[i] = {"r": None, "res": res, "checkpoint": checkpoint}
+                t_t = timedelta(seconds=round(time() - s_t))
+                print(f"**** Time taken for {self.dataset}_{i * len(thresholds) + j} = {t_t}")
+                self.dump(results, self.prefix + f"_{npref}_from_0-{i * len(thresholds) + j}.pkl")
         total = timedelta(seconds=round(time() - start_time))
         print(f"**** Time taken for {self.name} on {self.dataset} = {total}")

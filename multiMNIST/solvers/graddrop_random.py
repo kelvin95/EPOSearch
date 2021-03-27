@@ -49,17 +49,17 @@ def recover_flattened(flat_grad, indices, shapes):
 
 
 def get_d_graddrop(gradients, leak=0.0):
-    purity = 0.5 * (1 + (torch.sum(gradients, dim=0) / torch.sum(torch.abs(gradients), dim=0)))
-    uniform = torch.rand_like(purity)
+    uniform = torch.rand_like(gradients[0])
+    purity = torch.full_like(gradients[0], 0.5)  # randomly choose a sign
     mask = (purity > uniform) * (gradients > 0) + (purity < uniform) * (gradients < 0)
     gradients = (leak + (1 - leak) * mask) * gradients
     return torch.sum(gradients, dim=0)
 
 
-class GradDrop(Solver):
+class GradDropRandom(Solver):
     @property
     def name(self):
-        return "graddrop"
+        return "graddrop_random"
 
     def update_fn(self, X, ts, model, optimizer):
         # obtain and store the gradient
@@ -87,7 +87,7 @@ class GradDrop(Solver):
         optimizer.step()
 
     def run(self):
-        """Run graddrop"""
+        """Run random graddrop"""
         print(f"**** Now running {self.name} on {self.dataset} ... ")
         start_time = time()
         init_weight = np.array([0.5, 0.5])
