@@ -22,7 +22,9 @@ class Solver(object):
 
         self.dataset = dataset_name
         self.dataset_config = get_dataset_config(dataset_name)
-        self.train_loader, self.test_loader = load_dataset(self.dataset_config)
+        self.train_loader, self.test_loader = load_dataset(
+            self.dataset_config, self.flags.batch_size, self.flags.n_workers
+        )
 
     @property
     def name(self):

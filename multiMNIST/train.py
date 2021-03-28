@@ -15,12 +15,14 @@ flags.DEFINE_integer("valid_frequency", 1, "validation frequency", lower_bound=1
 
 flags.DEFINE_float("lr", 1e-3, "learning rate", lower_bound=0.0)
 flags.DEFINE_float("momentum", 0.0, "momentum", lower_bound=0.0)
+flags.DEFINE_integer("batch_size", 256, "batch size ", lower_bound=1)
+flags.DEFINE_integer("n_workers", 4, "number of data workers", lower_bound=0)
 flags.DEFINE_integer("n_preferences", 5, "number of preference vectors", lower_bound=1)
 
 flags.DEFINE_multi_enum(
     "dset",
     "all",
-    ["mnist", "fashion", "fashion_and_mnist", "celeba", "all"],
+    ["mnist", "fashion", "fashion_and_mnist", "all", "celeba", "cifar100"],
     "name of dataset to use",
 )
 flags.DEFINE_string("outdir", "out", "Output dir to save results")

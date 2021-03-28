@@ -1,7 +1,8 @@
 from dataclasses import dataclass
 import pickle
-from typing import Tuple
+from typing import Callable, List, Tuple
 
+import numpy as np
 import torch
 import torch.utils.data
 import torchvision
@@ -32,7 +33,76 @@ DATASET_FACTORY = {
     "fashion": DatasetConfig("fashion", "data/multi_fashion.pickle", 2, 10, (1, 36, 36)),
     "fashion_and_mnist": DatasetConfig("fashion_and_mnist", "data/multi_fashion_and_mnist.pickle", 2, 10, (1, 36, 36)),
     "celeba": DatasetConfig("celeba", "/scratch/ssd002/home/kelvin/projects/gradmtl/notebooks/datasets", 40, 1, (3, 64, 64)),
+    "cifar100": DatasetConfig("cifar100", "/scratch/ssd001/datasets/cifar100/", 5, 20, (3, 32, 32)),
 }
+
+
+class MTLCIFAR100(torch.utils.data.Dataset):
+    """MTL CIFAR-100 dataset.
+
+    We randomly assign each of the 100 fine labels into n_coarse_labels labels.
+    Repeating this n_tasks times, we get n_tasks number of tasks. Then the goal
+    of the MTL learner is to classify the images according to each of the coarse
+    label groups.
+
+    Args:
+        dataset_path (str): Path to the dataset.
+        train (bool): Whether to load the train vs test split.
+        n_tasks (int): Number of tasks to construct.
+        n_coarse_labels (int): Number of classes per task.
+    """
+
+    CIFAR_MEAN = (0.5070751592371323, 0.48654887331495095, 0.4409178433670343)
+    CIFAR_STD = (0.2673342858792401, 0.2564384629170883, 0.27615047132568404)
+
+    def __init__(self, dataset_path: str, train: bool, tasks: List[List[int]]) -> None:
+        super(MTLCIFAR100, self).__init__()
+        transform = self._build_transform(train)
+        self.dataset = torchvision.datasets.CIFAR100(dataset_path, train, transform=transform)
+        self.tasks = tasks
+
+    @classmethod
+    def build_tasks(cls, n_tasks: int, n_coarse_labels: int) -> List[List[int]]:
+        coarse_labels = []
+        current_coarse_label = 0
+        for _ in range(100):
+            coarse_labels.append(current_coarse_label)
+            current_coarse_label = (current_coarse_label + 1) % n_coarse_labels
+
+        tasks = []
+        for _ in range(n_tasks):
+            np.random.shuffle(coarse_labels)
+            tasks.append(np.copy(coarse_labels))
+        return tasks
+
+    def _build_transform(self, train: bool) -> Callable:
+        transforms = []
+        if train:
+            transforms.append(torchvision.transforms.RandomCrop(32, padding=4))
+            transforms.append(torchvision.transforms.RandomHorizontalFlip())
+        transforms.append(torchvision.transforms.ToTensor())
+        transforms.append(torchvision.transforms.Normalize(self.CIFAR_MEAN, self.CIFAR_STD))
+        return torchvision.transforms.Compose(transforms)
+
+    def __getitem__(self, index: int) -> Tuple[torch.FloatTensor, torch.FloatTensor]:
+        """Return one MTL example.
+
+        Args:
+            index (int): The desired index.
+
+        Returns:
+            (torch.FloatTensor): [3 x width x height] image tensor.
+            (torch.LongTensor): [num_tasks] label tensor.
+        """
+        image, label = self.dataset[index]
+        mtl_labels = []
+        for task_id in range(len(self.tasks)):
+            mtl_labels.append(self.tasks[task_id][label])
+        mtl_labels = torch.tensor(mtl_labels, dtype=torch.long)
+        return image, mtl_labels
+
+    def __len__(self) -> int:
+        return len(self.dataset)
 
 
 def get_dataset_config(dataset_name: str) -> DatasetConfig:
@@ -81,6 +151,10 @@ def load_dataset(
         test_dataset = torchvision.datasets.CelebA(
             config.dataset_path, target_type="attr", split="valid", transform=transform
         )
+    elif config.dataset_name == "cifar100":
+        tasks = MTLCIFAR100.build_tasks(config.n_tasks, config.n_classes_per_task)
+        train_dataset = MTLCIFAR100(config.dataset_path, True, tasks)
+        test_dataset = MTLCIFAR100(config.dataset_path, False, tasks)
     else:
         raise ValueError(f"Dataset {config.dataset_name} is not supported!")
 
