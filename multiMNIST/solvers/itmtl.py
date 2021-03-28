@@ -149,7 +149,6 @@ class ITMTL(Solver):
         for i in range(self.flags.n_preferences):
             model = self.configure_model()
             result, checkpoint = self.train(model, None)
-            results[i] = {"r": None, "res": res, "checkpoint": checkpoint}
             results[i] = dict(r=None, res=result, checkpoint=checkpoint)
             self.dump(results, self.prefix + f"_{self.flags.n_preferences}_from_0-{i}.pkl")
 

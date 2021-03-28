@@ -36,6 +36,7 @@ def get_d_paretomtl_init(grads, value, weights, i):
     if torch.sum(idx) <= 0:
         flag = True
         return flag, torch.zeros(nobj)
+
     if torch.sum(idx) == 1:
         sol = torch.ones(1).cuda().float()
     else:
@@ -44,14 +45,7 @@ def get_d_paretomtl_init(grads, value, weights, i):
             [[vec[t]] for t in range(len(vec))]
         )
 
-    weight0 = torch.sum(
-        torch.stack([sol[j] * w[idx][j, 0] for j in torch.arange(0, torch.sum(idx))])
-    )
-    weight1 = torch.sum(
-        torch.stack([sol[j] * w[idx][j, 1] for j in torch.arange(0, torch.sum(idx))])
-    )
-    weight = torch.stack([weight0, weight1])
-
+    weight = torch.sum(torch.stack([sol[j] * w[idx][j] for j in torch.arange(0, torch.sum(idx))]), dim=0)
     return flag, weight
 
 
@@ -76,18 +70,8 @@ def get_d_paretomtl(grads, value, weights, i):
     vec = torch.cat((grads, torch.matmul(w[idx], grads)))
     sol, nd = MinNormSolver.find_min_norm_element([[vec[t]] for t in range(len(vec))])
 
-    weight0 = sol[0] + torch.sum(
-        torch.stack(
-            [sol[j] * w[idx][j - 2, 0] for j in torch.arange(2, 2 + torch.sum(idx))]
-        )
-    )
-    weight1 = sol[1] + torch.sum(
-        torch.stack(
-            [sol[j] * w[idx][j - 2, 1] for j in torch.arange(2, 2 + torch.sum(idx))]
-        )
-    )
-    weight = torch.stack([weight0, weight1])
-
+    weight = torch.sum(torch.stack([sol[j] * w[idx][j - 2] for j in torch.arange(2, 2 + torch.sum(idx))]), dim=0)
+    weight = weight + torch.from_numpy(sol[:len(grads)]).to(weight.device, torch.float)
     return weight
 
 
