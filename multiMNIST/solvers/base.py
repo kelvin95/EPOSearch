@@ -5,30 +5,24 @@ from torch.optim import Optimizer
 import numpy as np
 import copy
 import pickle
-from typing import List, Tuple, Dict, Any
+from typing import List, Tuple, Dict, Any, Union
 from pathlib import Path
 
-from .model_lenet import RegressionModel, RegressionTrain
-from .dataset import load_dataset
+from .models import MTLModel, MTLModelWithCELoss, MTLLeNet, MTLResNet18
+from .dataset import get_dataset_config, load_dataset
 
 
 class Solver(object):
     """Base class for solvers"""
 
-    def __init__(self, dataset: str, flags: Any):
+    def __init__(self, dataset_name: str, flags: Any):
         """Initialize solver with parsed flags"""
-        self._dataset = dataset
         # copy to avoid mutating unexpectedly
-        self._flags = copy.deepcopy(flags)
-        self.train_loader, self.test_loader = load_dataset(dataset)
+        self.flags = copy.deepcopy(flags)
 
-    @property
-    def dataset(self):
-        return self._dataset
-
-    @property
-    def flags(self):
-        return self._flags
+        self.dataset = dataset_name
+        self.dataset_config = get_dataset_config(dataset_name)
+        self.train_loader, self.test_loader = load_dataset(self.dataset_config)
 
     @property
     def name(self):
@@ -37,6 +31,27 @@ class Solver(object):
     @property
     def prefix(self):
         return f"{self.name}_{self.dataset}_{self.flags.arch}_{self.flags.epochs}"
+
+    def configure_model(self, with_ce_loss: bool = True) -> Union[MTLModel, MTLModelWithCELoss]:
+        """Return a configured MTL model."""
+        if self.flags.arch == "resnet18":
+            model = MTLResNet18(
+                self.dataset_config.n_tasks,
+                self.dataset_config.n_classes_per_task,
+                self.dataset_config.input_shape,
+            )
+        elif self.flags.arch == "lenet":
+            model = MTLLeNet(
+                self.dataset_config.n_tasks,
+                self.dataset_config.n_classes_per_task,
+                self.dataset_config.input_shape,
+            )
+        else:
+            raise ValueError(f"Model {self.flags.arch} is not supported!")
+
+        if with_ce_loss:
+            model = MTLModelWithCELoss(model)
+        return model
 
     def epoch_start(self) -> None:
         """Reset variables/attributes at start of epoch.
@@ -165,10 +180,7 @@ class Solver(object):
 
         # DEFINE MODEL
         # ---------------------
-        model = RegressionTrain(
-            RegressionModel(self.flags.n_tasks), np.array([0.5, 0.5])
-        )
-
+        model = self.configure_model()
         if torch.cuda.is_available():
             model.cuda()
         # ---------***---------

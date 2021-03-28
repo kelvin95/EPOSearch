@@ -1,6 +1,7 @@
 from typing import Dict, Optional, Tuple
 
 import torch
+import torchvision
 
 __all__ = ["MTLModel", "MTLModelWithCELoss", "MTLLeNet", "MTLResNet18"]
 
@@ -128,13 +129,13 @@ class MTLLeNet(MTLModel):
         return torch.stack(logits, dim=1)
 
     def get_shared_parameters(self) -> Dict[str, torch.nn.Parameter]:
-        return self.net.named_parameters()
+        return {k: v for k, v in self.net.named_parameters()}
 
     def get_task_parameters(self, task_id: int) -> Dict[str, torch.nn.Parameter]:
-        return getattr(self, f"task_{task_id}").named_parameters()
+        return {k: v for k, v in getattr(self, f"task_{task_id}").named_parameters()}
 
 
-class MTLResNet18(torch.nn.Module):
+class MTLResNet18(MTLModel):
     """MTL ResNet18 model.
 
     Args:
@@ -176,7 +177,7 @@ class MTLResNet18(torch.nn.Module):
         return torch.stack(logits, dim=1)
 
     def get_shared_parameters(self) -> Dict[str, torch.nn.Parameter]:
-        return self.net.named_parameters()
+        return {k: v for k, v in self.net.named_parameters()}
 
     def get_task_parameters(self, task: int) -> Dict[str, torch.nn.Parameter]:
-        return getattr(self, f"task_{task_id}").named_parameters()
+        return {k: v for k, v in getattr(self, f"task_{task_id}").named_parameters()}

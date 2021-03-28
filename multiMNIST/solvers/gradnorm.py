@@ -8,7 +8,6 @@ import numpy as np
 import torch
 
 from .base import Solver
-from .model_lenet import RegressionModel, RegressionTrain
 
 from time import time
 from datetime import timedelta
@@ -104,7 +103,7 @@ class GradNorm(Solver):
             s_t = time()
             self.alpha = alpha
             self.initial_task_loss = None
-            model = RegressionTrain(RegressionModel(self.flags.n_tasks), init_weight)
+            model = self.configure_model()
             if torch.cuda.is_available():
                 model.cuda()
             # additional weights for gradnorm

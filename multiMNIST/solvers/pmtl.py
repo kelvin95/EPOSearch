@@ -9,7 +9,6 @@ import torch
 from torch.autograd import Variable
 
 from .base import Solver
-from .model_lenet import RegressionModel, RegressionTrain
 from .min_norm_solvers import MinNormSolver
 from .utils import circle_points
 
@@ -228,7 +227,7 @@ class PMTL(Solver):
             s_t = time()
             self.ref_vec = preferences
             self.pref_idx = i
-            model = RegressionTrain(RegressionModel(self.flags.n_tasks), init_weight)
+            model = self.configure_model()
             if torch.cuda.is_available():
                 model.cuda()
             optimizer = torch.optim.SGD(model.parameters(), lr=1e-3, momentum=0.0)

@@ -4,7 +4,6 @@ from torch.autograd import Variable
 
 from .epo_lp import EPO_LP
 from .base import Solver
-from .model_lenet import RegressionModel, RegressionTrain
 from .utils import circle_points, getNumParams
 
 from time import time
@@ -77,9 +76,7 @@ class EPO(Solver):
         """ Run Pareto MTL """
         print(f"**** Now running {self.name} on {self.dataset} ... ")
         start_time = time()
-        model = RegressionTrain(
-            RegressionModel(self.flags.n_tasks), np.array([0.5, 0.5])
-        )
+        model = self.configure_model()
         _, n_params = getNumParams(model.parameters())
         print(f"# params={n_params}")
         npref = 5
@@ -89,7 +86,7 @@ class EPO(Solver):
         results = dict()
         for i, preference in enumerate(preferences[::-1]):
             s_t = time()
-            model = RegressionTrain(RegressionModel(self.flags.n_tasks), preference)
+            model = self.configure_model()
             # Instantia EPO Linear Program Solver
             self.epo_lp = EPO_LP(m=self.flags.n_tasks, n=n_params, r=preference)
             self.preference = preference

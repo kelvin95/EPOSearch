@@ -2,7 +2,6 @@ import numpy as np
 import torch
 
 from .base import Solver
-from .model_lenet import RegressionModel, RegressionTrain
 from .utils import circle_points
 
 from time import time
@@ -37,7 +36,7 @@ class LinScalar(Solver):
         results = dict()
         for i, preference in enumerate(preferences[::-1]):
             s_t = time()
-            model = RegressionTrain(RegressionModel(self.flags.n_tasks), preference)
+            model = self.configure_model()
             if torch.cuda.is_available():
                 model.cuda()
             self.preference = preference

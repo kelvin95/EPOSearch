@@ -2,7 +2,6 @@ import numpy as np
 import torch
 
 from .base import Solver
-from .model_lenet import RegressionModel, RegressionTrain
 
 from time import time
 from datetime import timedelta
@@ -28,7 +27,7 @@ class Individual(Solver):
         for j in range(2):
             s_t = time()
             init_weight = np.array([1 - j, j])
-            model = RegressionTrain(RegressionModel(self.flags.n_tasks), init_weight)
+            model = self.configure_model()
             if torch.cuda.is_available():
                 model.cuda()
             optimizer = torch.optim.SGD(model.parameters(), lr=1e-3, momentum=0.0)

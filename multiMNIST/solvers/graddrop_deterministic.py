@@ -8,7 +8,6 @@ import numpy as np
 import torch
 
 from .base import Solver
-from .model_lenet import RegressionModel, RegressionTrain
 
 from time import time
 from datetime import timedelta
@@ -100,7 +99,7 @@ class GradDropDeterministic(Solver):
                 s_t = time()
                 self.leak = leak
                 self.threshold = threshold
-                model = RegressionTrain(RegressionModel(self.flags.n_tasks), init_weight)
+                model = self.configure_model()
                 if torch.cuda.is_available():
                     model.cuda()
                 optimizer = torch.optim.SGD(model.parameters(), lr=1e-3, momentum=0.0)
