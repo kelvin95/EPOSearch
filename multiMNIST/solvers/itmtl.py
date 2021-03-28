@@ -97,17 +97,17 @@ class ITMTL(Solver):
         shared_params = [v for k, v in model.model.get_shared_parameters().items()]
 
         task_loss = model(X, ts)
-        for i in range(self.flags.n_tasks):
+        for i in range(self.dataset_config.n_tasks):
             shared_grads = torch.autograd.grad(
                 task_loss[i], shared_params, retain_graph=True
             )
             flat_grads[i] = flatten_grad(shared_grads)
 
         # update task parameters
-        for i in range(self.flags.n_tasks):
+        for i in range(self.dataset_config.n_tasks):
             task_params = [v for k, v in model.model.get_task_parameters(i).items()]
             task_grads = torch.autograd.grad(
-                task_loss[i], task_params, retain_graph=True
+                task_loss[i], task_params, retain_graph=True,
             )
             for index, params in enumerate(task_params):
                 params.data = params.data - self.flags.lr * task_grads[index]
@@ -145,19 +145,13 @@ class ITMTL(Solver):
         """Run itmtl-pcgrad"""
         print(f"**** Now running {self.name} on {self.dataset} ... ")
         start_time = time()
-        init_weight = np.array([0.5, 0.5])
-        npref = 5
         results = dict()
-        for i in range(npref):
-            s_t = time()
+        for i in range(self.flags.n_preferences):
             model = self.configure_model()
-            if torch.cuda.is_available():
-                model.cuda()
-            optimizer = None
-            res, checkpoint = self.train(model, optimizer)
+            result, checkpoint = self.train(model, None)
             results[i] = {"r": None, "res": res, "checkpoint": checkpoint}
-            t_t = timedelta(seconds=round(time() - s_t))
-            print(f"**** Time taken for {self.dataset}_{i} = {t_t}")
-            self.dump(results, self.prefix + f"_{npref}_from_0-{i}.pkl")
-        total = timedelta(seconds=round(time() - start_time))
-        print(f"**** Time taken for {self.name} on {self.dataset} = {total}")
+            results[i] = dict(r=None, res=result, checkpoint=checkpoint)
+            self.dump(results, self.prefix + f"_{self.flags.n_preferences}_from_0-{i}.pkl")
+
+        total_time = timedelta(seconds=round(time() - start_time))
+        print(f"**** Time taken for {self.name} on {self.dataset} = {total_time}s.")

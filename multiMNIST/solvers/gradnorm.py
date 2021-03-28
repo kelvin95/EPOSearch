@@ -95,30 +95,27 @@ class GradNorm(Solver):
         """Run gradnorm"""
         print(f"**** Now running {self.name} on {self.dataset} ... ")
         start_time = time()
-        init_weight = np.array([0.5, 0.5])
-        alphas = np.arange(0, 1.1, 0.25)
-        npref = len(alphas)
         results = dict()
+        alphas = np.arange(0, 1.1, 1. / max(1, self.flags.n_preferences - 1))
         for i, alpha in enumerate(alphas):
-            s_t = time()
             self.alpha = alpha
             self.initial_task_loss = None
             model = self.configure_model()
-            if torch.cuda.is_available():
-                model.cuda()
+
             # additional weights for gradnorm
-            weights = torch.ones(self.flags.n_tasks)
-            if torch.cuda.is_available():
-                weights = weights.cuda()
+            weights = torch.ones(self.dataset_config.n_tasks).to(self.device)
             weights.requires_grad_()
             self.weights = weights
+
             optimizer = torch.optim.SGD(
-                list(model.parameters()) + [weights], lr=1e-3, momentum=0.0
+                list(model.parameters()) + [weights],
+                lr=self.flags.lr,
+                momentum=self.flags.momentum
             )
-            res, checkpoint = self.train(model, optimizer)
-            results[i] = {"r": None, "res": res, "checkpoint": checkpoint}
-            t_t = timedelta(seconds=round(time() - s_t))
-            print(f"**** Time taken for {self.dataset}_{i} = {t_t}")
-            self.dump(results, self.prefix + f"_{npref}_from_0-{i}.pkl")
-        total = timedelta(seconds=round(time() - start_time))
-        print(f"**** Time taken for {self.name} on {self.dataset} = {total}")
+
+            result, checkpoint = self.train(model, optimizer)
+            results[i] = dict(r=None, res=result, checkpoint=checkpoint)
+            self.dump(results, self.prefix + f"_{self.flags.n_preferences}_from_0-{i}.pkl")
+
+        total_time = timedelta(seconds=round(time() - start_time))
+        print(f"**** Time taken for {self.name} on {self.dataset} = {total_time}s.")

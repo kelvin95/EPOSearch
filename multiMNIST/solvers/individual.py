@@ -12,34 +12,28 @@ class Individual(Solver):
     def name(self):
         return "individual"
 
-    def update_fn(self, X, ts, model, optimizer):
-        # Update using only j th task
+    def update_fn(self, images, labels, model, optimizer):
         optimizer.zero_grad()
-        task_j_loss = model(X, ts, self.j)
-        task_j_loss.backward()
+        task_loss = model(images, labels, self.task_id)
+        task_loss.backward()
         optimizer.step()
 
     def run(self):
         """Run individual"""
-        print(f"**** Now running {self.name} on {self.dataset} ... ")
+        print(f"**** Now running {self.name} on {self.dataset}...")
         start_time = time()
         results = dict()
-        for j in range(2):
-            s_t = time()
-            init_weight = np.array([1 - j, j])
+        for task_id in range(self.dataset_config.n_tasks):
+            init_weight = np.zeros(self.dataset_config.n_tasks)
+            init_weight[task_id] = 1
+
+            self.task_id = task_id
             model = self.configure_model()
-            if torch.cuda.is_available():
-                model.cuda()
-            optimizer = torch.optim.SGD(model.parameters(), lr=1e-3, momentum=0.0)
-            self.j = j
-            res, checkpoint = self.train(model, optimizer)
-            results[j] = {
-                "r": init_weight,
-                "res": res,
-                "checkpoint": checkpoint,
-            }
-            t_t = timedelta(seconds=round(time() - s_t))
-            print(f"**** Time taken for {self.dataset}_{j} = {t_t}")
+            optimizer = torch.optim.SGD(model.parameters(), lr=self.flags.lr, momentum=self.flags.momentum)
+
+            result, checkpoint = self.train(model, optimizer)
+            results[task_id] = dict(r=init_weight, res=result, checkpoint=checkpoint)
+
         self.dump(results, self.prefix + ".pkl")
-        total = timedelta(seconds=round(time() - start_time))
-        print(f"**** Time taken for {self.name} on {self.dataset} = {total}")
+        total_time = timedelta(seconds=round(time() - start_time))
+        print(f"**** Time taken for {self.name} on {self.dataset} = {total_time}s.")

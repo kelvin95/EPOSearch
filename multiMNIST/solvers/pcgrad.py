@@ -65,19 +65,19 @@ class PCGrad(Solver):
     def name(self):
         return "pcgrad"
 
-    def update_fn(self, X, ts, model, optimizer):
+    def update_fn(self, images, labels, model, optimizer):
+        optimizer.zero_grad()
+
         # obtain and store the gradient
         flat_grads = {}
-        for i in range(self.flags.n_tasks):
+        task_losses = model(images, labels)
+        for i in range(self.dataset_config.n_tasks):
             optimizer.zero_grad()
-            task_loss = model(X, ts)
-            task_loss[i].backward()
+            task_losses[i].backward(retain_graph=True)
             flat_grads[i] = flatten_grad(model.parameters())
 
-        grads = [flat_grads[i]["grad"] for i in range(len(flat_grads))]
-        grads = torch.stack(grads)
-
         # calculate the gradient
+        grads = torch.stack([flat_grads[i]["grad"] for i in range(len(flat_grads))])
         grads = get_d_pcgrad(grads)
         grads = recover_flattened(
             grads, flat_grads[0]["indices"], flat_grads[0]["shapes"]
@@ -91,22 +91,18 @@ class PCGrad(Solver):
         optimizer.step()
 
     def run(self):
-        """Run graddrop"""
+        """Run PCGrad."""
         print(f"**** Now running {self.name} on {self.dataset} ... ")
         start_time = time()
-        init_weight = np.array([0.5, 0.5])
-        npref = 5
         results = dict()
-        for i in range(npref):
+        for i in range(self.flags.n_preferences):
             s_t = time()
             model = self.configure_model()
-            if torch.cuda.is_available():
-                model.cuda()
-            optimizer = torch.optim.SGD(model.parameters(), lr=1e-3, momentum=0.0)
-            res, checkpoint = self.train(model, optimizer)
-            results[i] = {"r": None, "res": res, "checkpoint": checkpoint}
-            t_t = timedelta(seconds=round(time() - s_t))
-            print(f"**** Time taken for {self.dataset}_{i} = {t_t}")
-            self.dump(results, self.prefix + f"_{npref}_from_0-{i}.pkl")
-        total = timedelta(seconds=round(time() - start_time))
-        print(f"**** Time taken for {self.name} on {self.dataset} = {total}")
+            optimizer = torch.optim.SGD(model.parameters(), lr=self.flags.lr, momentum=self.flags.momentum)
+
+            result, checkpoint = self.train(model, optimizer)
+            results[i] = dict(r=None, res=result, checkpoint=checkpoint)
+            self.dump(results, self.prefix + f"_{self.flags.n_preferences}_from_0-{i}.pkl")
+
+        total_time = timedelta(seconds=round(time() - start_time))
+        print(f"**** Time taken for {self.name} on {self.dataset} = {total_time}s.")

@@ -40,7 +40,7 @@ class MTLModel(torch.nn.Module):
             task_id (Optional[int]): Optionally specify the desired task id.
 
         Returns:
-            (torch.FloatTensor): [batch x num_tasks x num_classes_per_task] logits if
+            (torch.FloatTensor): [batch x num_classes_per_task x num_classes] logits if
                 `task_id` is None. Otherwise, [batch x num_classes_per_task] logits instead.
         """
         raise NotImplementedError()
@@ -63,13 +63,38 @@ class MTLModelWithCELoss(torch.nn.Module):
     def __init__(self, model: MTLModel) -> None:
         super(MTLModelWithCELoss, self).__init__()
         self.model = model
-        self.ce_loss = torch.nn.CrossEntropyLoss()
+
+    def ce_loss(
+        self, logits: torch.FloatTensor, labels: torch.LongTensor, reduction: str = "mean",
+    ) -> torch.FloatTensor:
+        """Compute (binary) cross entropy loss.
+
+        Args:
+            logits (torch.FloatTensor): [batch x num_classes_per_task x ...] logits tensor.
+            labels (torch.FloatTensor): [batch x ...] labels tensor.
+            reduction (str): One of {mean, none}.
+
+        Returns:
+            (torch.FloatTensor): [1] loss tensor.
+        """
+        if self.model.n_classes_per_task > 1:
+            return torch.nn.functional.cross_entropy(logits, labels, reduction=reduction)
+        elif self.model.n_classes_per_task == 1:
+            return torch.nn.functional.binary_cross_entropy_with_logits(
+                logits[:, 0], labels.float(), reduction=reduction
+            )
+        else:
+            raise ValueError(
+                f"Expected `n_classes_per_task` >= 1; got "
+                f"`n_classes_per_task` == {self.model.n_classes_per_task} instead."
+            )
 
     def forward(
         self,
         images: torch.FloatTensor,
         labels: torch.LongTensor,
-        task_id: Optional[int] = None
+        task_id: Optional[int] = None,
+        return_logits: bool = False,
     ) -> torch.FloatTensor:
         """Compute classification loss on a batch on images.
 
@@ -77,19 +102,19 @@ class MTLModelWithCELoss(torch.nn.Module):
             images (torch.FloatTensor): [batch x channels x height x width] image tensor.
             labels (torch.LongTensor): [batch x n_tasks] labels tensor.
             task_id (Optional[int]): Optionally specify the desired task id.
+            return_logits (bool): Whether to return multi-task logits; defaults to True.
 
         Returns:
             (torch.FloatTensor): [num_tasks] losses if `task_id` is None.
                 Otherwise, [1] loss tensor for the specified `task_id` instead.
         """
         if task_id is not None:
-            return self.ce_loss(self.model(images, task_id), labels[:, task_id])
-
-        task_loss = []
-        task_logits = self.model(images)
-        for task_id in range(self.model.n_tasks):
-            task_loss.append(self.ce_loss(task_logits[:, task_id], labels[:, task_id]))
-        return torch.stack(task_loss, dim=0)
+            logits = self.model(images, task_id)
+            loss = self.ce_loss(logits, labels[:, task_id])
+        else:
+            logits = self.model(images)
+            loss = torch.mean(self.ce_loss(logits, labels, reduction="none"), dim=0)
+        return (loss, logits) if return_logits else loss
 
 
 class MTLLeNet(MTLModel):
@@ -114,25 +139,20 @@ class MTLLeNet(MTLModel):
             torch.nn.Flatten(),
             torch.nn.Linear(20 * output_height * output_width, 50)
         )
-
-        for task_id in range(self.n_tasks):
-            setattr(self, f"task_{task_id}", torch.nn.Linear(50, self.n_classes_per_task))
+        self.predictor = torch.nn.Linear(50, self.n_tasks * self.n_classes_per_task)
 
     def forward(self, images: torch.FloatTensor, task_id: Optional[int] = None) -> torch.FloatTensor:
-        x = self.net(images)
+        logits = self.predictor(self.net(images))
+        logits = logits.view(logits.size(0), self.n_classes_per_task, self.n_tasks)
         if task_id is not None:
-            return getattr(self, f"task_{task_id}")(x)
-
-        logits = []
-        for task_id in range(self.n_tasks):
-            logits.append(getattr(self, f"task_{task_id}")(x))
-        return torch.stack(logits, dim=1)
+            return logits[:, :, task_id]
+        return logits
 
     def get_shared_parameters(self) -> Dict[str, torch.nn.Parameter]:
         return {k: v for k, v in self.net.named_parameters()}
 
     def get_task_parameters(self, task_id: int) -> Dict[str, torch.nn.Parameter]:
-        return {k: v for k, v in getattr(self, f"task_{task_id}").named_parameters()}
+        return {k: v for k, v in self.predictor.named_parameters()}
 
 
 class MTLResNet18(MTLModel):
@@ -162,22 +182,18 @@ class MTLResNet18(MTLModel):
         num_hidden_channels = self.net.fc.in_features
         self.net.fc = torch.nn.Sequential()
 
-        # per-task predictors
-        for task_id in range(self.n_tasks):
-            setattr(self, f"task_{task_id}", torch.nn.Linear(num_hidden_channels, self.n_classes_per_task))
+        # output predictor
+        self.predictor = torch.nn.Linear(num_hidden_channels, self.n_tasks * self.n_classes_per_task)
 
     def forward(self, images: torch.FloatTensor, task_id: Optional[int] = None) -> torch.FloatTensor:
-        x = self.net(images)
+        logits = self.predictor(self.net(images))
+        logits = logits.view(logits.size(0), self.n_classes_per_task, self.n_tasks)
         if task_id is not None:
-            return getattr(self, f"task_{task_id}")(x)
-
-        logits = []
-        for task_id in range(self.n_tasks):
-            logits.append(getattr(self, f"task_{task_id}")(x))
-        return torch.stack(logits, dim=1)
+            return logits[:, :, task_id]
+        return logits
 
     def get_shared_parameters(self) -> Dict[str, torch.nn.Parameter]:
         return {k: v for k, v in self.net.named_parameters()}
 
-    def get_task_parameters(self, task: int) -> Dict[str, torch.nn.Parameter]:
-        return {k: v for k, v in getattr(self, f"task_{task_id}").named_parameters()}
+    def get_task_parameters(self, task_id: int) -> Dict[str, torch.nn.Parameter]:
+        return {k: v for k, v in self.predictor.named_parameters()}

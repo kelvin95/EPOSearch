@@ -32,6 +32,12 @@ class Solver(object):
     def prefix(self):
         return f"{self.name}_{self.dataset}_{self.flags.arch}_{self.flags.epochs}"
 
+    @property
+    def device(self) -> torch.device:
+        if torch.cuda.is_available:
+            return torch.device("cuda")
+        return torch.device("cpu")
+
     def configure_model(self, with_ce_loss: bool = True) -> Union[MTLModel, MTLModelWithCELoss]:
         """Return a configured MTL model."""
         if self.flags.arch == "resnet18":
@@ -51,6 +57,7 @@ class Solver(object):
 
         if with_ce_loss:
             model = MTLModelWithCELoss(model)
+        model = model.to(self.device)
         return model
 
     def epoch_start(self) -> None:
@@ -81,91 +88,57 @@ class Solver(object):
         self, model: nn.Module, optimizer: Optimizer,
     ) -> Tuple[Dict[str, List[float]], Dict[str, torch.Tensor]]:
         """Train model"""
-        # DO PRETRAINING
-        # ----------------------------------------
         self.pretrain(model, optimizer)
-        # CONTAINERS FOR KEEPING TRACK OF PROGRESS
-        # ----------------------------------------
-        task_train_losses = []
-        train_accs = []
-        # ---------***---------
 
-        # TRAIN
-        # -----
-        for t in range(self.flags.epochs):
+        train_losses = []
+        train_accuracies = []
+
+        for epoch in range(self.flags.epochs):
             self.epoch_start()
+
             model.train()
-            for (it, batch) in enumerate(self.train_loader):
-
-                X = batch[0]
-                ts = batch[1]
+            for _, (images, labels) in enumerate(self.train_loader):
                 if torch.cuda.is_available():
-                    X = X.cuda()
-                    ts = ts.cuda()
-
-                self.update_fn(X, ts, model, optimizer)
+                    images = images.cuda(non_blocking=True)
+                    labels = labels.cuda(non_blocking=True)
+                self.update_fn(images, labels, model, optimizer)
 
             self.epoch_end()
 
             # Calculate and record performance
-            if t == 0 or (t + 1) % 2 == 0:
+            if epoch % self.flags.valid_frequency == 0:
                 model.eval()
-                with torch.no_grad():
-                    total_train_loss = []
-                    train_acc = []
 
-                    correct1_train = 0
-                    correct2_train = 0
+                valid_loss = []
+                valid_accuracy = 0.
+                for _, (images, labels) in enumerate(self.test_loader):
+                    if torch.cuda.is_available():
+                        images = images.cuda(non_blocking=True)
+                        labels = labels.cuda(non_blocking=True)
 
-                    for (it, batch) in enumerate(self.test_loader):
+                    with torch.no_grad():
+                        loss, logits = model(images, labels, return_logits=True)
 
-                        X = batch[0]
-                        ts = batch[1]
-                        if torch.cuda.is_available():
-                            X = X.cuda()
-                            ts = ts.cuda()
+                    valid_loss.append(loss)
+                    predictions = torch.argmax(logits, dim=1)
+                    valid_accuracy += torch.sum(predictions.eq(labels), dim=0)
 
-                        valid_train_loss = model(X, ts)
-                        total_train_loss.append(valid_train_loss)
-                        output1 = model.model(X).max(2, keepdim=True)[1][:, 0]
-                        output2 = model.model(X).max(2, keepdim=True)[1][:, 1]
-                        correct1_train += (
-                            output1.eq(ts[:, 0].view_as(output1)).sum().item()
-                        )
-                        correct2_train += (
-                            output2.eq(ts[:, 1].view_as(output2)).sum().item()
-                        )
+                valid_loss = torch.mean(torch.stack(valid_loss), dim=0)
+                train_losses.append(valid_loss.cpu().numpy())
 
-                    train_acc = np.stack(
-                        [
-                            1.0 * correct1_train / len(self.test_loader.dataset),
-                            1.0 * correct2_train / len(self.test_loader.dataset),
-                        ]
-                    )
+                valid_accuracy = valid_accuracy / len(self.test_loader.dataset)
+                train_accuracies.append(valid_accuracy.cpu().numpy())
 
-                    total_train_loss = torch.stack(total_train_loss)
-                    average_train_loss = torch.mean(total_train_loss, dim=0)
-
-                # record and print
-                if torch.cuda.is_available():
-
-                    task_train_losses.append(average_train_loss.data.cpu().numpy())
-                    train_accs.append(train_acc)
-
-                    print(
-                        "{}/{}: train_loss={}, train_acc={}".format(
-                            t + 1,
-                            self.flags.epochs,
-                            task_train_losses[-1],
-                            train_accs[-1],
-                        )
-                    )
+                print(
+                    f"Epoch {epoch + 1}/{self.flags.epochs}: "
+                    f"train_loss = {train_losses[-1]} "
+                    f"train_acc = {train_accuracies[-1]} "
+                )
 
         result = {
-            "training_losses": task_train_losses,
-            "training_accuracies": train_accs,
+            "training_losses": train_losses,
+            "training_accuracies": train_accuracies,
         }
-
         return result, model.model.state_dict()
 
     def dump(self, contents, filename):

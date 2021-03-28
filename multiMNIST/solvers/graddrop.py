@@ -12,7 +12,6 @@ from .base import Solver
 from time import time
 from datetime import timedelta
 
-
 # copied from
 # https://discuss.pytorch.org/t/how-to-flatten-and-then-unflatten-all-model-parameters/34730
 def flatten_grad(parameters):
@@ -63,7 +62,7 @@ class GradDrop(Solver):
     def update_fn(self, X, ts, model, optimizer):
         # obtain and store the gradient
         flat_grads = {}
-        for i in range(self.flags.n_tasks):
+        for i in range(self.dataset_config.n_tasks):
             optimizer.zero_grad()
             task_loss = model(X, ts)
             task_loss[i].backward()
@@ -89,23 +88,16 @@ class GradDrop(Solver):
         """Run graddrop"""
         print(f"**** Now running {self.name} on {self.dataset} ... ")
         start_time = time()
-        init_weight = np.array([0.5, 0.5])
-        leaks = np.arange(0, 1.1, 0.25)
-        npref = len(leaks)
         results = dict()
+        leaks = np.arange(0, 1.1, 1. / max(1, self.flags.n_preferences - 1))
         for i, leak in enumerate(leaks):
-            s_t = time()
             self.leak = leak
-
             model = self.configure_model()
-            if torch.cuda.is_available():
-                model.cuda()
+            optimizer = torch.optim.SGD(model.parameters(), lr=self.flags.lr, momentum=self.flags.momentum)
 
-            optimizer = torch.optim.SGD(model.parameters(), lr=1e-3, momentum=0.0)
-            res, checkpoint = self.train(model, optimizer)
-            results[i] = {"r": None, "res": res, "checkpoint": checkpoint}
-            t_t = timedelta(seconds=round(time() - s_t))
-            print(f"**** Time taken for {self.dataset}_{i} = {t_t}")
-            self.dump(results, self.prefix + f"_{npref}_from_0-{i}.pkl")
-        total = timedelta(seconds=round(time() - start_time))
-        print(f"**** Time taken for {self.name} on {self.dataset} = {total}")
+            result, checkpoint = self.train(model, optimizer)
+            results[i] = dict(r=None, res=result, checkpoint=checkpoint)
+            self.dump(results, self.prefix + f"_{self.flags.n_preferences}_from_0-{i}.pkl")
+
+        total_time = timedelta(seconds=round(time() - start_time))
+        print(f"**** Time taken for {self.name} on {self.dataset} = {total_time}s.")

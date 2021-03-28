@@ -4,7 +4,7 @@ from torch.autograd import Variable
 
 from .epo_lp import EPO_LP
 from .base import Solver
-from .utils import circle_points, getNumParams
+from .utils import rand_unit_vectors, getNumParams
 
 from time import time
 from datetime import timedelta
@@ -24,15 +24,17 @@ class EPO(Solver):
         if self.n_manual_adjusts > 0:
             print(f"\t # manual tweek={self.n_manual_adjusts}")
 
-    def update_fn(self, X, ts, model, optimizer):
+    def update_fn(self, images, labels, model, optimizer):
+        optimizer.zero_grad()
+
         # Obtain losses and gradients
         grads = {}
         losses = []
-        for i in range(self.flags.n_tasks):
+        task_losses = model(images, labels)
+        for i in range(self.dataset_config.n_tasks):
             optimizer.zero_grad()
-            task_loss = model(X, ts)
-            losses.append(task_loss[i].data.cpu().numpy())
-            task_loss[i].backward()
+            losses.append(task_losses[i].data.cpu().numpy())
+            task_losses[i].backward(retain_graph=True)
 
             # One can use scalable method proposed in the MOO-MTL paper
             # for large scale problem; but we use the gradient
@@ -40,9 +42,7 @@ class EPO(Solver):
             grads[i] = []
             for param in model.parameters():
                 if param.grad is not None:
-                    grads[i].append(
-                        Variable(param.grad.data.clone().flatten(), requires_grad=False)
-                    )
+                    grads[i].append(param.grad.data.clone().flatten())
 
         grads_list = [torch.cat(grads[i]) for i in range(len(grads))]
         G = torch.stack(grads_list)
@@ -57,17 +57,16 @@ class EPO(Solver):
         except Exception as e:
             print(e)
             alpha = None
+
         if alpha is None:  # A patch for the issue in cvxpy
             alpha = self.preference / self.preference.sum()
             self.n_manual_adjusts += 1
 
-        if torch.cuda.is_available():
-            alpha = self.flags.n_tasks * torch.from_numpy(alpha).cuda()
-        else:
-            alpha = self.flags.n_tasks * torch.from_numpy(alpha)
+        alpha = self.dataset_config.n_tasks * torch.from_numpy(alpha).to(self.device)
+
         # Optimization step
         optimizer.zero_grad()
-        task_losses = model(X, ts)
+        task_losses = model(images, labels)
         weighted_loss = torch.sum(task_losses * alpha)  # * 5. * max(epo_lp.mu_rl, 0.2)
         weighted_loss.backward()
         optimizer.step()
@@ -76,28 +75,25 @@ class EPO(Solver):
         """ Run Pareto MTL """
         print(f"**** Now running {self.name} on {self.dataset} ... ")
         start_time = time()
+
         model = self.configure_model()
         _, n_params = getNumParams(model.parameters())
         print(f"# params={n_params}")
-        npref = 5
-        preferences = circle_points(
-            npref, min_angle=0.0001 * np.pi / 2, max_angle=0.9999 * np.pi / 2
-        )  # preference
+
         results = dict()
-        for i, preference in enumerate(preferences[::-1]):
-            s_t = time()
+        preferences = rand_unit_vectors(self.dataset_config.n_tasks, self.flags.n_preferences, True)
+        for i, preference in enumerate(preferences):
             model = self.configure_model()
+            optimizer = torch.optim.SGD(model.parameters(), lr=self.flags.lr, momentum=self.flags.momentum)
+
             # Instantia EPO Linear Program Solver
-            self.epo_lp = EPO_LP(m=self.flags.n_tasks, n=n_params, r=preference)
+            self.epo_lp = EPO_LP(m=self.dataset_config.n_tasks, n=n_params, r=preference)
             self.preference = preference
-            if torch.cuda.is_available():
-                model.cuda()
-            optimizer = torch.optim.SGD(model.parameters(), lr=1e-3, momentum=0.0)
+
             # uses self.epo_lp and self.update_fn
-            res, checkpoint = self.train(model, optimizer)
-            results[i] = {"r": preference, "res": res, "checkpoint": checkpoint}
-            t_t = timedelta(seconds=round(time() - s_t))
-            print(f"**** Time taken for {self.dataset}_{i} = {t_t}")
-            self.dump(results, self.prefix + f"_{npref}_{i}_from_0-.pkl")
-        total = timedelta(seconds=round(time() - start_time))
-        print(f"**** Time taken for {self.name} on {self.dataset} = {total}")
+            result, checkpoint = self.train(model, optimizer)
+            results[i] = dict(r=preference, res=result, checkpoint=checkpoint)
+            self.dump(results, self.prefix + f"_{self.flags.n_preferences}_from_0-{i}.pkl")
+
+        total_time = timedelta(seconds=round(time() - start_time))
+        print(f"**** Time taken for {self.name} on {self.dataset} = {total_time}s.")

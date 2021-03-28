@@ -4,6 +4,7 @@ from typing import Tuple
 
 import torch
 import torch.utils.data
+import torchvision
 
 __all__ = ["DatasetConfig", "get_dataset_config", "load_dataset"]
 
@@ -30,6 +31,7 @@ DATASET_FACTORY = {
     "mnist": DatasetConfig("mnist", "data/multi_mnist.pickle", 2, 10, (1, 36, 36)),
     "fashion": DatasetConfig("fashion", "data/multi_fashion.pickle", 2, 10, (1, 36, 36)),
     "fashion_and_mnist": DatasetConfig("fashion_and_mnist", "data/multi_fashion_and_mnist.pickle", 2, 10, (1, 36, 36)),
+    "celeba": DatasetConfig("celeba", "/scratch/ssd002/home/kelvin/projects/gradmtl/notebooks/datasets", 40, 1, (3, 64, 64)),
 }
 
 
@@ -40,7 +42,7 @@ def get_dataset_config(dataset_name: str) -> DatasetConfig:
 
 
 def load_dataset(
-    config: DatasetConfig, batch_size: int = 256, num_workers: int = 0,
+    config: DatasetConfig, batch_size: int = 256, num_workers: int = 4,
 ) -> Tuple[torch.utils.data.DataLoader, torch.utils.data.DataLoader]:
     """Return train/test data loaders.
 
@@ -62,17 +64,32 @@ def load_dataset(
         testX = torch.from_numpy(testX.reshape(20000, *config.input_shape)).float()
         testLabel = torch.from_numpy(testLabel).long()
 
-        train_set = torch.utils.data.TensorDataset(trainX, trainLabel)
-        test_set = torch.utils.data.TensorDataset(testX, testLabel)
-
-        train_loader = torch.utils.data.DataLoader(
-            dataset=train_set, batch_size=batch_size, num_workers=num_workers, shuffle=True
+        train_dataset = torch.utils.data.TensorDataset(trainX, trainLabel)
+        test_dataset = torch.utils.data.TensorDataset(testX, testLabel)
+    elif config.dataset_name == "celeba":
+        transform = torchvision.transforms.Compose(
+            [
+                torchvision.transforms.CenterCrop(178),
+                torchvision.transforms.Resize(config.input_shape[1:]),
+                torchvision.transforms.ToTensor(),
+                torchvision.transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+            ]
         )
-        test_loader = torch.utils.data.DataLoader(
-            dataset=test_set, batch_size=batch_size, num_workers=num_workers, shuffle=False
+        train_dataset = torchvision.datasets.CelebA(
+            config.dataset_path, target_type="attr", split="train", transform=transform
+        )
+        test_dataset = torchvision.datasets.CelebA(
+            config.dataset_path, target_type="attr", split="valid", transform=transform
         )
     else:
         raise ValueError(f"Dataset {config.dataset_name} is not supported!")
+
+    train_loader = torch.utils.data.DataLoader(
+        dataset=train_dataset, batch_size=batch_size, num_workers=num_workers, shuffle=True
+    )
+    test_loader = torch.utils.data.DataLoader(
+        dataset=test_dataset, batch_size=batch_size, num_workers=num_workers, shuffle=False
+    )
 
     print(f"Total training iterations: {len(train_loader)}")
     print(f"Total testing iterations: {len(test_loader)}")

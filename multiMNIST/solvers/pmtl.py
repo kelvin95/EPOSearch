@@ -10,7 +10,7 @@ from torch.autograd import Variable
 
 from .base import Solver
 from .min_norm_solvers import MinNormSolver
-from .utils import circle_points
+from .utils import rand_unit_vectors
 
 from time import time
 from datetime import timedelta
@@ -104,62 +104,46 @@ class PMTL(Solver):
         for t in range(2):
 
             model.train()
-            for (it, batch) in enumerate(self.train_loader):
-                X = batch[0]
-                ts = batch[1]
-                if torch.cuda.is_available():
-                    X = X.cuda()
-                    ts = ts.cuda()
+            for _, (images, labels) in enumerate(self.train_loader):
+                images = images.to(self.device, non_blocking=True)
+                labels = labels.to(self.device, non_blocking=True)
 
                 grads = {}
                 losses_vec = []
 
                 # obtain and store the gradient value
-                for i in range(self.flags.n_tasks):
+                optimizer.zero_grad()
+                task_losses = model(images, labels)
+                for i in range(self.dataset_config.n_tasks):
                     optimizer.zero_grad()
-                    task_loss = model(X, ts)
-                    losses_vec.append(task_loss[i].data)
-
-                    task_loss[i].backward()
-
-                    grads[i] = []
+                    losses_vec.append(task_losses[i].data)
+                    task_losses[i].backward(retain_graph=True)
 
                     # can use scalable method proposed in the MOO-MTL paper for
                     # large scale problem but we keep use the gradient of all
                     # parameters in this experiment
+                    grads[i] = []
                     for param in model.parameters():
                         if param.grad is not None:
-                            grads[i].append(
-                                Variable(
-                                    param.grad.data.clone().flatten(),
-                                    requires_grad=False,
-                                )
-                            )
-
-                grads_list = [torch.cat(grads[i]) for i in range(len(grads))]
-                grads = torch.stack(grads_list)
+                            grads[i].append(param.grad.data.clone().flatten())
 
                 # calculate the weights
                 losses_vec = torch.stack(losses_vec)
+                grads = torch.stack([torch.cat(grads[i]) for i in range(len(grads))])
                 flag, weight_vec = get_d_paretomtl_init(
                     grads, losses_vec, self.ref_vec, self.pref_idx
                 )
 
                 # early stop once a feasible solution is obtained
                 if flag:
-                    print("fealsible solution is obtained.")
+                    print("feasible solution is obtained.")
                     break
 
                 # optimization step
                 optimizer.zero_grad()
-                for i in range(len(task_loss)):
-                    task_loss = model(X, ts)
-                    if i == 0:
-                        loss_total = weight_vec[i] * task_loss[i]
-                    else:
-                        loss_total = loss_total + weight_vec[i] * task_loss[i]
-
-                loss_total.backward()
+                task_losses = model(images, labels)
+                total_loss = torch.sum(task_losses * weight_vec)
+                total_loss.backward()
                 optimizer.step()
 
             else:
@@ -168,32 +152,30 @@ class PMTL(Solver):
             # break the loop once a feasible solutions is found
             break
 
-    def update_fn(self, X, ts, model, optimizer):
+    def update_fn(self, images, labels, model, optimizer):
+        optimizer.zero_grad()
+
         # obtain and store the gradient
         grads = {}
         losses_vec = []
 
-        for i in range(self.flags.n_tasks):
+        task_losses = model(images, labels)
+        for i in range(self.dataset_config.n_tasks):
             optimizer.zero_grad()
-            task_loss = model(X, ts)
-            losses_vec.append(task_loss[i].data)
-
-            task_loss[i].backward()
+            losses_vec.append(task_losses[i].data)
+            task_losses[i].backward(retain_graph=True)
 
             # can use scalable method proposed in the MOO-MTL paper for large scale
             # problem but we keep use the gradient of all parameters in this experiment
             grads[i] = []
             for param in model.parameters():
                 if param.grad is not None:
-                    grads[i].append(
-                        Variable(param.grad.data.clone().flatten(), requires_grad=False)
-                    )
+                    grads[i].append(param.grad.data.clone().flatten())
 
-        grads_list = [torch.cat(grads[i]) for i in range(len(grads))]
-        grads = torch.stack(grads_list)
 
         # calculate the weights
         losses_vec = torch.stack(losses_vec)
+        grads = torch.stack([torch.cat(grads[i]) for i in range(len(grads))])
         weight_vec = get_d_paretomtl(grads, losses_vec, self.ref_vec, self.pref_idx)
 
         # normalize_coeff = n_tasks / torch.sum(torch.abs(weight_vec))
@@ -202,39 +184,28 @@ class PMTL(Solver):
 
         # optimization step
         optimizer.zero_grad()
-        for i in range(len(task_loss)):
-            task_loss = model(X, ts)
-            if i == 0:
-                loss_total = weight_vec[i] * task_loss[i]
-            else:
-                loss_total = loss_total + weight_vec[i] * task_loss[i]
-
-        loss_total.backward()
+        task_losses = model(images, labels)
+        total_loss = torch.sum(task_losses * weight_vec)
+        total_loss.backward()
         optimizer.step()
 
     def run(self):
         """Run Pareto MTL"""
         print(f"**** Now running {self.name} on {self.dataset} ... ")
         start_time = time()
-        init_weight = np.array([0.5, 0.5])
-        npref = 5
-        rvecs = circle_points(
-            npref, min_angle=0.0001 * np.pi / 2, max_angle=0.9999 * np.pi / 2
-        )
-        preferences = torch.tensor(rvecs).cuda().float()
+        preferences = rand_unit_vectors(self.dataset_config.n_tasks, self.flags.n_preferences, True)
+        preferences = torch.tensor(preferences, device=self.device, dtype=torch.float)
+
         results = dict()
         for i, preference in enumerate(preferences):
-            s_t = time()
             self.ref_vec = preferences
             self.pref_idx = i
             model = self.configure_model()
-            if torch.cuda.is_available():
-                model.cuda()
-            optimizer = torch.optim.SGD(model.parameters(), lr=1e-3, momentum=0.0)
-            res, checkpoint = self.train(model, optimizer)
-            results[i] = {"r": preference, "res": res, "checkpoint": checkpoint}
-            t_t = timedelta(seconds=round(time() - s_t))
-            print(f"**** Time taken for {self.dataset}_{i} = {t_t}")
-            self.dump(results, self.prefix + f"_{npref}_from_0-{i}.pkl")
-        total = timedelta(seconds=round(time() - start_time))
-        print(f"**** Time taken for {self.name} on {self.dataset} = {total}")
+            optimizer = torch.optim.SGD(model.parameters(), lr=self.flags.lr, momentum=self.flags.momentum)
+
+            result, checkpoint = self.train(model, optimizer)
+            results[i] = dict(r=preference, res=result, checkpoint=checkpoint)
+            self.dump(results, self.prefix + f"_{self.flags.n_preferences}_from_0-{i}.pkl")
+
+        total_time = timedelta(seconds=round(time() - start_time))
+        print(f"**** Time taken for {self.name} on {self.dataset} = {total_time}s.")

@@ -11,6 +11,22 @@ def getNumParams(params):
     return numParams, numTrainable
 
 
+def rand_unit_vectors(ndims: int, num_vectors: int = 1, absolute: bool = True) -> np.ndarray:
+    """Return a uniformly random unit vector.
+
+    Args:
+        ndims (int): Number of dimensions.
+        num_vectors (int): Number of vectors to return.
+        absolute (bool): Whether to return absolute coordinates.
+
+    Returns:
+        (np.ndarray): [ndims] unit vector.
+    """
+    vector = np.random.randn(num_vectors, ndims)
+    vector = vector / np.linalg.norm(vector, axis=-1)[:, None]
+    return np.abs(vector) if absolute else vector
+
+
 def circle_points(K, min_angle=None, max_angle=None):
     # generate evenly distributed preference vector
     ang0 = np.pi / 20.0 if min_angle is None else min_angle

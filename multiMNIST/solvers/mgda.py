@@ -18,7 +18,7 @@ from datetime import timedelta
 def get_d_mgda(vec):
     r"""Calculate the gradient direction for MGDA."""
     sol, nd = MinNormSolver.find_min_norm_element([[vec[t]] for t in range(len(vec))])
-    return torch.tensor(sol).cuda().float()
+    return torch.tensor(sol, device=vec.device, dtype=torch.float)
 
 
 class MGDA(Solver):
@@ -26,58 +26,47 @@ class MGDA(Solver):
     def name(self):
         return "mgda"
 
-    def update_fn(self, X, ts, model, optimizer):
+    def update_fn(self, images, labels, model, optimizer):
+        optimizer.zero_grad()
+
         # obtain and store the gradient
         grads = {}
-        for i in range(self.flags.n_tasks):
+        task_losses = model(images, labels)
+        for i in range(self.dataset_config.n_tasks):
             optimizer.zero_grad()
-            task_loss = model(X, ts)
-            task_loss[i].backward()
+            task_losses[i].backward(retain_graph=True)
 
             # can use scalable method proposed in the MOO-MTL paper for large scale
             # problem but we keep use the gradient of all parameters in this experiment
             grads[i] = []
             for param in model.parameters():
                 if param.grad is not None:
-                    grads[i].append(
-                        Variable(param.grad.data.clone().flatten(), requires_grad=False)
-                    )
-
-        grads_list = [torch.cat(grads[i]) for i in range(len(grads))]
-        grads = torch.stack(grads_list)
+                    grads[i].append(param.grad.data.clone().flatten())
 
         # calculate the weights
+        grads = torch.stack([torch.cat(grads[i]) for i in range(len(grads))])
         weight_vec = get_d_mgda(grads)
 
         # optimization step
         optimizer.zero_grad()
-        for i in range(len(task_loss)):
-            task_loss = model(X, ts)
-            if i == 0:
-                loss_total = weight_vec[i] * task_loss[i]
-            else:
-                loss_total = loss_total + weight_vec[i] * task_loss[i]
-
-        loss_total.backward()
+        task_losses = model(images, labels)
+        total_loss = torch.sum(weight_vec * task_losses)
+        total_loss.backward()
         optimizer.step()
 
     def run(self):
         """Run mgda"""
         print(f"**** Now running {self.name} on {self.dataset} ... ")
         start_time = time()
-        init_weight = np.array([0.5, 0.5])
-        npref = 5
         results = dict()
-        for i in range(npref):
+        for i in range(self.flags.n_preferences):
             s_t = time()
             model = self.configure_model()
-            if torch.cuda.is_available():
-                model.cuda()
-            optimizer = torch.optim.SGD(model.parameters(), lr=1e-3, momentum=0.0)
-            res, checkpoint = self.train(model, optimizer)
-            results[i] = {"r": None, "res": res, "checkpoint": checkpoint}
-            t_t = timedelta(seconds=round(time() - s_t))
-            print(f"**** Time taken for {self.dataset}_{i} = {t_t}")
-            self.dump(results, self.prefix + f"_{npref}_from_0-{i}.pkl")
-        total = timedelta(seconds=round(time() - start_time))
-        print(f"**** Time taken for {self.name} on {self.dataset} = {total}")
+            optimizer = torch.optim.SGD(model.parameters(), lr=self.flags.lr, momentum=self.flags.momentum)
+
+            result, checkpoint = self.train(model, optimizer)
+            results[i] = dict(r=None, res=result, checkpoint=checkpoint)
+            self.dump(results, self.prefix + f"_{self.flags.n_preferences}_from_0-{i}.pkl")
+
+        total_time = timedelta(seconds=round(time() - start_time))
+        print(f"**** Time taken for {self.name} on {self.dataset} = {total_time}s.")
