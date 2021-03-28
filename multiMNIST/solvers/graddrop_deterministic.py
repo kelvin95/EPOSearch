@@ -72,7 +72,7 @@ class GradDropDeterministic(Solver):
         grads = torch.stack(grads)
 
         # calculate the gradient
-        grads = get_d_graddrop(grads, self.leak, self.threshold)
+        grads = get_d_graddrop(grads, self.leak)
         grads = recover_flattened(
             grads, flat_grads[0]["indices"], flat_grads[0]["shapes"]
         )
