@@ -112,7 +112,7 @@ class GradVacc(Solver):
         print(f"**** Now running {self.name} on {self.dataset} ... ")
         start_time = time()
         results = dict()
-        beta = np.array([1e-1, 1e-2, 1e-3])
+        beta = np.array([1e-2, 1e-3, 1e-1])
 
 
         for i in range(self.flags.n_preferences):
@@ -137,7 +137,7 @@ class GradVacc(Solver):
                         if j not in grad_sim_dict[i].keys():
                             grad_sim_dict[i][j] = dict()
                         if (i != j):
-                            grad_sim_dict[i][j][k] = 0.0
+                            grad_sim_dict[i][j][k] = torch.tensor(0.0).cuda()
             
             self.grad_sim_dict = grad_sim_dict
             print(self.grad_sim_dict)
