@@ -97,11 +97,20 @@ class Solver(object):
             self.epoch_start()
 
             model.train()
-            for _, (images, labels) in enumerate(self.train_loader):
+            for index, (images, labels) in enumerate(self.train_loader):
                 if torch.cuda.is_available():
                     images = images.cuda(non_blocking=True)
                     labels = labels.cuda(non_blocking=True)
                 self.update_fn(images, labels, model, optimizer)
+
+                if self.flags.log_frequency > 0 and index % self.flags.log_frequency == 0:
+                    with torch.no_grad():
+                        task_losses = model(images, labels)
+                    print(
+                        f"Train Epoch {epoch + 1}/{self.flags.epochs} "
+                        f"[{index}/{len(self.train_loader)}]: "
+                        f"Losses - {task_losses.cpu().numpy()}"
+                    )
 
             self.epoch_end()
 
@@ -130,7 +139,7 @@ class Solver(object):
                 train_accuracies.append(valid_accuracy.cpu().numpy())
 
                 print(
-                    f"Epoch {epoch + 1}/{self.flags.epochs}: "
+                    f"Validation Epoch {epoch + 1}/{self.flags.epochs}: "
                     f"train_loss = {train_losses[-1]} "
                     f"train_acc = {train_accuracies[-1]} "
                 )

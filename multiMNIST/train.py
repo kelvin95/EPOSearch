@@ -10,6 +10,7 @@ from absl import flags
 FLAGS = flags.FLAGS
 
 flags.DEFINE_integer("epochs", 100, "number of training epochs", lower_bound=0)
+flags.DEFINE_integer("log_frequency", 0, "validation frequency", lower_bound=0)
 flags.DEFINE_integer("valid_frequency", 1, "validation frequency", lower_bound=1)
 
 flags.DEFINE_float("lr", 1e-3, "learning rate", lower_bound=0.0)
@@ -32,7 +33,7 @@ flags.DEFINE_boolean("debug", False, "Produces debugging output.")
 
 def main(argv):
     if FLAGS.dset == "all" or (isinstance(FLAGS.dset, list) and "all" in FLAGS.dset):
-        FLAGS.dset = ["mnist", "fashion", "fashion_and_mnist", "celeba"]
+        FLAGS.dset = ["mnist", "fashion", "fashion_and_mnist"]
     else:
         # unique while preserving order passed in on cmdline
         FLAGS.dset = list(dict.fromkeys(FLAGS.dset))
