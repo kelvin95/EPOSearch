@@ -76,6 +76,10 @@ class PCGrad(Solver):
             task_losses[i].backward(retain_graph=True)
             flat_grads[i] = flatten_grad(model.parameters())
 
+        # clear graph
+        optimizer.zero_grad()
+        del task_losses
+
         # calculate the gradient
         grads = torch.stack([flat_grads[i]["grad"] for i in range(len(flat_grads))])
         grads = get_d_pcgrad(grads)

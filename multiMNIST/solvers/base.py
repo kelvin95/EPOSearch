@@ -130,8 +130,12 @@ class Solver(object):
                     with torch.no_grad():
                         loss, logits = model(images, labels, return_logits=True)
 
+                    if logits.size(1) > 1:
+                        predictions = torch.argmax(logits, dim=1)
+                    else:
+                        predictions = (logits >= 0.)[:, 0]
+
                     valid_loss.append(loss)
-                    predictions = torch.argmax(logits, dim=1)
                     valid_accuracy += torch.sum(predictions.eq(labels), dim=0)
 
                 valid_loss = torch.mean(torch.stack(valid_loss), dim=0)

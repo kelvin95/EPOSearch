@@ -43,6 +43,10 @@ class MGDA(Solver):
                 if param.grad is not None:
                     grads[i].append(param.grad.data.clone().flatten())
 
+        # clear graph
+        optimizer.zero_grad()
+        del task_losses
+
         # calculate the weights
         grads = torch.stack([torch.cat(grads[i]) for i in range(len(grads))])
         weight_vec = get_d_mgda(grads)

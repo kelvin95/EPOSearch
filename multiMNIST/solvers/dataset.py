@@ -33,6 +33,7 @@ DATASET_FACTORY = {
     "fashion": DatasetConfig("fashion", "data/multi_fashion.pickle", 2, 10, (1, 36, 36)),
     "fashion_and_mnist": DatasetConfig("fashion_and_mnist", "data/multi_fashion_and_mnist.pickle", 2, 10, (1, 36, 36)),
     "celeba": DatasetConfig("celeba", "/scratch/ssd002/home/kelvin/projects/gradmtl/notebooks/datasets", 40, 1, (3, 64, 64)),
+    "cifar10": DatasetConfig("cifar10", "/scratch/ssd001/datasets/cifar10/", 10, 1, (3, 32, 32)),
     "cifar100": DatasetConfig("cifar100", "/scratch/ssd001/datasets/cifar100/", 5, 20, (3, 32, 32)),
 }
 
@@ -151,6 +152,24 @@ def load_dataset(
         test_dataset = torchvision.datasets.CelebA(
             config.dataset_path, target_type="attr", split="valid", transform=transform
         )
+    elif config.dataset_name == "cifar10":
+        train_transform = torchvision.transforms.Compose(
+            [
+                torchvision.transforms.RandomCrop(32, padding=4),
+                torchvision.transforms.RandomHorizontalFlip(),
+                torchvision.transforms.ToTensor(),
+                torchvision.transforms.Normalize(MTLCIFAR100.CIFAR_MEAN, MTLCIFAR100.CIFAR_STD)
+            ]
+        )
+        test_transform = torchvision.transforms.Compose(
+            [
+                torchvision.transforms.ToTensor(),
+                torchvision.transforms.Normalize(MTLCIFAR100.CIFAR_MEAN, MTLCIFAR100.CIFAR_STD)
+            ]
+        )
+        target_transform = lambda x: torch.nn.functional.one_hot(torch.tensor(x), 10)
+        train_dataset = torchvision.datasets.CIFAR10(config.dataset_path, True, train_transform, target_transform)
+        test_dataset = torchvision.datasets.CIFAR10(config.dataset_path, False, test_transform, target_transform)
     elif config.dataset_name == "cifar100":
         tasks = MTLCIFAR100.build_tasks(config.n_tasks, config.n_classes_per_task)
         train_dataset = MTLCIFAR100(config.dataset_path, True, tasks)

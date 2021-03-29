@@ -62,16 +62,18 @@ class GradDropDeterministic(Solver):
     def update_fn(self, X, ts, model, optimizer):
         # obtain and store the gradient
         flat_grads = {}
+        task_losses = model(X, ts)
         for i in range(self.dataset_config.n_tasks):
             optimizer.zero_grad()
-            task_loss = model(X, ts)
-            task_loss[i].backward()
+            task_losses[i].backward(retain_graph=True)
             flat_grads[i] = flatten_grad(model.parameters())
 
-        grads = [flat_grads[i]["grad"] for i in range(len(flat_grads))]
-        grads = torch.stack(grads)
+        # clear graph
+        optimizer.zero_grad()
+        del task_losses
 
         # calculate the gradient
+        grads = torch.stack([flat_grads[i]["grad"] for i in range(len(flat_grads))])
         grads = get_d_graddrop(grads, self.leak)
         grads = recover_flattened(
             grads, flat_grads[0]["indices"], flat_grads[0]["shapes"]

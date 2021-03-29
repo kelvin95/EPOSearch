@@ -100,7 +100,7 @@ class PMTL(Solver):
                 task_losses = model(images, labels)
                 for i in range(self.dataset_config.n_tasks):
                     optimizer.zero_grad()
-                    losses_vec.append(task_losses[i].data)
+                    losses_vec.append(task_losses[i].data.clone())
                     task_losses[i].backward(retain_graph=True)
 
                     # can use scalable method proposed in the MOO-MTL paper for
@@ -110,6 +110,10 @@ class PMTL(Solver):
                     for param in model.parameters():
                         if param.grad is not None:
                             grads[i].append(param.grad.data.clone().flatten())
+
+                # clear graph
+                optimizer.zero_grad()
+                del task_losses
 
                 # calculate the weights
                 losses_vec = torch.stack(losses_vec)
@@ -146,7 +150,7 @@ class PMTL(Solver):
         task_losses = model(images, labels)
         for i in range(self.dataset_config.n_tasks):
             optimizer.zero_grad()
-            losses_vec.append(task_losses[i].data)
+            losses_vec.append(task_losses[i].data.clone())
             task_losses[i].backward(retain_graph=True)
 
             # can use scalable method proposed in the MOO-MTL paper for large scale
@@ -156,6 +160,9 @@ class PMTL(Solver):
                 if param.grad is not None:
                     grads[i].append(param.grad.data.clone().flatten())
 
+        # clear graph
+        optimizer.zero_grad()
+        del task_losses
 
         # calculate the weights
         losses_vec = torch.stack(losses_vec)

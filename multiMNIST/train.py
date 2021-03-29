@@ -22,7 +22,7 @@ flags.DEFINE_integer("n_preferences", 5, "number of preference vectors", lower_b
 flags.DEFINE_multi_enum(
     "dset",
     "all",
-    ["mnist", "fashion", "fashion_and_mnist", "all", "celeba", "cifar100"],
+    ["mnist", "fashion", "fashion_and_mnist", "all", "celeba", "cifar10", "cifar100"],
     "name of dataset to use",
 )
 flags.DEFINE_string("outdir", "out", "Output dir to save results")

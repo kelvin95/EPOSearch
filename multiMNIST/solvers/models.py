@@ -137,7 +137,8 @@ class MTLLeNet(MTLModel):
             torch.nn.ReLU(),
             torch.nn.MaxPool2d(2, 2),
             torch.nn.Flatten(),
-            torch.nn.Linear(20 * output_height * output_width, 50)
+            torch.nn.Linear(20 * output_height * output_width, 50),
+            torch.nn.ReLU(),
         )
         self.predictor = torch.nn.Linear(50, self.n_tasks * self.n_classes_per_task)
 
