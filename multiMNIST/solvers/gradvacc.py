@@ -108,11 +108,11 @@ class GradVacc(Solver):
         optimizer.step()
 
     def run(self):
-        """Run PCGrad."""
+        """Run GradVacc."""
         print(f"**** Now running {self.name} on {self.dataset} ... ")
         start_time = time()
         results = dict()
-        beta = np.array([1e-2, 1e-3, 1e-1])
+        beta = np.array([1e-2, 1e-3, 1e-1, 1e-4, 5e-2])
 
 
         for i in range(self.flags.n_preferences):
