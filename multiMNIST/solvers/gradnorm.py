@@ -13,40 +13,6 @@ from time import time
 from datetime import timedelta
 
 
-# copied from
-# https://discuss.pytorch.org/t/how-to-flatten-and-then-unflatten-all-model-parameters/34730
-def flatten_grad(parameters):
-    l = []
-    indices = []
-    shapes = []
-    s = 0
-    for p in parameters:
-        if p.grad is None:
-            shapes.append(None)
-            continue
-        shapes.append(p.grad.shape)
-        p = torch.flatten(p.grad)
-        size = p.shape[0]
-        l.append(p)
-        indices.append((s, s + size))
-        s += size
-    flat = torch.cat(l).view(-1)
-    return {"grad": flat, "indices": indices, "shapes": shapes}
-
-
-def recover_flattened(flat_grad, indices, shapes):
-    l = [flat_grad[s:e] for (s, e) in indices]
-    grads = []
-    index = 0
-    for i in range(len(shapes)):
-        if shapes[i] is None:
-            grads.append(None)
-            continue
-        grads.append(l[index].view(shapes[i]))
-        index += 1
-    return grads
-
-
 class GradNorm(Solver):
     @property
     def name(self):
@@ -96,7 +62,7 @@ class GradNorm(Solver):
         print(f"**** Now running {self.name} on {self.dataset} ... ")
         start_time = time()
         results = dict()
-        alphas = np.arange(0, 1.1, 1. / max(1, self.flags.n_preferences - 1))
+        alphas = np.arange(0, 1.1, 1.0 / max(1, self.flags.n_preferences - 1))
         for i, alpha in enumerate(alphas):
             self.alpha = alpha
             self.initial_task_loss = None
@@ -110,12 +76,14 @@ class GradNorm(Solver):
             optimizer = torch.optim.SGD(
                 list(model.parameters()) + [weights],
                 lr=self.flags.lr,
-                momentum=self.flags.momentum
+                momentum=self.flags.momentum,
             )
 
             result, checkpoint = self.train(model, optimizer)
             results[i] = dict(r=None, res=result, checkpoint=checkpoint)
-            self.dump(results, self.prefix + f"_{self.flags.n_preferences}_from_0-{i}.pkl")
+            self.dump(
+                results, self.prefix + f"_{self.flags.n_preferences}_from_0-{i}.pkl"
+            )
 
         total_time = timedelta(seconds=round(time() - start_time))
         print(f"**** Time taken for {self.name} on {self.dataset} = {total_time}s.")

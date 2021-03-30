@@ -8,49 +8,17 @@ import numpy as np
 import torch
 
 from .base import Solver
+from .utils import flatten_grad, recover_flattened
 
 from time import time
 from datetime import timedelta
-
-# copied from
-# https://discuss.pytorch.org/t/how-to-flatten-and-then-unflatten-all-model-parameters/34730
-def flatten_grad(parameters):
-    l = []
-    indices = []
-    shapes = []
-    s = 0
-    for p in parameters:
-        if p.grad is None:
-            shapes.append(None)
-            continue
-        shapes.append(p.grad.shape)
-        p = torch.flatten(p.grad)
-        size = p.shape[0]
-        l.append(p)
-        indices.append((s, s + size))
-        s += size
-    flat = torch.cat(l).view(-1)
-    return {"grad": flat, "indices": indices, "shapes": shapes}
-
-
-def recover_flattened(flat_grad, indices, shapes):
-    l = [flat_grad[s:e] for (s, e) in indices]
-    grads = []
-    index = 0
-    for i in range(len(shapes)):
-        if shapes[i] is None:
-            grads.append(None)
-            continue
-        grads.append(l[index].view(shapes[i]))
-        index += 1
-    return grads
 
 
 def get_d_pcgrad(gradients):
     final_grad = 0.0
     for grad_index, grad in enumerate(gradients):
         indices = np.arange(len(gradients))
-        indices = np.concatenate([indices[:grad_index], indices[grad_index + 1 :]])
+        indices = np.concatenate([indices[:grad_index], indices[grad_index + 1:]])
         np.random.shuffle(indices)
         for index in indices:
             other_grad = gradients[index]
@@ -102,11 +70,15 @@ class PCGrad(Solver):
         for i in range(self.flags.n_preferences):
             s_t = time()
             model = self.configure_model()
-            optimizer = torch.optim.SGD(model.parameters(), lr=self.flags.lr, momentum=self.flags.momentum)
+            optimizer = torch.optim.SGD(
+                model.parameters(), lr=self.flags.lr, momentum=self.flags.momentum
+            )
 
             result, checkpoint = self.train(model, optimizer)
             results[i] = dict(r=None, res=result, checkpoint=checkpoint)
-            self.dump(results, self.prefix + f"_{self.flags.n_preferences}_from_0-{i}.pkl")
+            self.dump(
+                results, self.prefix + f"_{self.flags.n_preferences}_from_0-{i}.pkl"
+            )
 
         total_time = timedelta(seconds=round(time() - start_time))
         print(f"**** Time taken for {self.name} on {self.dataset} = {total_time}s.")
