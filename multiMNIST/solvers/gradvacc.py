@@ -111,35 +111,21 @@ class GradVacc(Solver):
                     if m not in grad_sim_dict.keys():
                         grad_sim_dict[m] = {}
                     for j in range(self.dataset_config.n_tasks):
-<<<<<<< HEAD
                         if j not in grad_sim_dict[m].keys():
                             grad_sim_dict[m][j] = dict()
                         if (m != j):
                             grad_sim_dict[m][j][k] = torch.tensor(0.0).cuda()
             
-=======
-                        if j not in grad_sim_dict[i].keys():
-                            grad_sim_dict[i][j] = dict()
-                        if i != j:
-                            grad_sim_dict[i][j][k] = torch.tensor(0.0).cuda()
-
->>>>>>> 5bdd9ba595aadfcb219aa86296ff65d79ca56399
             self.grad_sim_dict = grad_sim_dict
             print(self.grad_sim_dict)
             result, checkpoint = self.train(model, optimizer)
             results[i] = dict(r=None, res=result, checkpoint=checkpoint)
-<<<<<<< HEAD
             self.dump(results, self.prefix + f"_{self.flags.n_preferences}_from_0-{i}.pkl")
             for m in self.grad_sim_dict.keys():
                 for j in self.grad_sim_dict[m].keys():
                     for k in self.grad_sim_dict[m][j].keys():
                         self.grad_sim_dict[m][j][k] = np.asarray(self.grad_sim_dict[m][j][k].detach().cpu())
             self.dump(self.grad_sim_dict, self.prefix + f"_{self.flags.n_preferences}_gradsim_dict_from_0-{i}.pkl")
-=======
-            self.dump(
-                results, self.prefix + f"_{self.flags.n_preferences}_from_0-{i}.pkl"
-            )
->>>>>>> 5bdd9ba595aadfcb219aa86296ff65d79ca56399
 
         total_time = timedelta(seconds=round(time() - start_time))
         print(f"**** Time taken for {self.name} on {self.dataset} = {total_time}s.")
