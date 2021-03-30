@@ -8,49 +8,19 @@ import numpy as np
 import torch
 
 from .base import Solver
+from .utils import flatten_grad, recover_flattened
 
 from time import time
 from datetime import timedelta
 
-# copied from
-# https://discuss.pytorch.org/t/how-to-flatten-and-then-unflatten-all-model-parameters/34730
-def flatten_grad(parameters):
-    l = []
-    indices = []
-    shapes = []
-    s = 0
-    for p in parameters:
-        if p.grad is None:
-            shapes.append(None)
-            continue
-        shapes.append(p.grad.shape)
-        p = torch.flatten(p.grad)
-        size = p.shape[0]
-        l.append(p)
-        indices.append((s, s + size))
-        s += size
-    flat = torch.cat(l).view(-1)
-    return {"grad": flat, "indices": indices, "shapes": shapes}
-
-
-def recover_flattened(flat_grad, indices, shapes):
-    l = [flat_grad[s:e] for (s, e) in indices]
-    grads = []
-    index = 0
-    for i in range(len(shapes)):
-        if shapes[i] is None:
-            grads.append(None)
-            continue
-        grads.append(l[index].view(shapes[i]))
-        index += 1
-    return grads
-
 
 def compute_grad_coeff(cos_sim, ema_cos_sim, grad_k_norm, other_grad_k_norm):
-    numerator = grad_k_norm * (ema_cos_sim * torch.sqrt(1 - (cos_sim**2)) - cos_sim * torch.sqrt(1-(ema_cos_sim**2)))
-    denominator = other_grad_k_norm * torch.sqrt(1 - ema_cos_sim**2)
+    numerator = grad_k_norm * (
+        ema_cos_sim * torch.sqrt(1 - (cos_sim ** 2))
+        - cos_sim * torch.sqrt(1 - (ema_cos_sim ** 2))
+    )
+    denominator = other_grad_k_norm * torch.sqrt(1 - ema_cos_sim ** 2)
     return numerator / denominator
-
 
 
 class GradVacc(Solver):
@@ -66,7 +36,9 @@ class GradVacc(Solver):
             for grad_index, grad in enumerate(gradients):
                 grad_k = grad[s:e]
                 indices = np.arange(len(gradients))
-                indices = np.concatenate([indices[:grad_index], indices[grad_index + 1 :]])
+                indices = np.concatenate(
+                    [indices[:grad_index], indices[grad_index + 1 :]]
+                )
                 np.random.shuffle(indices)
                 grad_k_norm = torch.linalg.norm(grad_k)
                 for index in indices:
@@ -75,13 +47,17 @@ class GradVacc(Solver):
                     cos_sim = torch.dot(grad_k, other_grad) / (grad_k_norm * other_grad_k_norm)
                     ema_cos_sim = self.grad_sim_dict[grad_index][index][k]
                     if cos_sim < ema_cos_sim:
-                        coeff = compute_grad_coeff(cos_sim, ema_cos_sim, grad_k_norm, other_grad_k_norm)
+                        coeff = compute_grad_coeff(
+                            cos_sim, ema_cos_sim, grad_k_norm, other_grad_k_norm
+                        )
                         grad_k = grad_k + (coeff * other_grad)
                     # Update EMA
-                    self.grad_sim_dict[grad_index][index][k] = (1 - self.beta) * self.grad_sim_dict[grad_index][index][k] + (self.beta * cos_sim)
+                    self.grad_sim_dict[grad_index][index][k] = (
+                        1 - self.beta
+                    ) * self.grad_sim_dict[grad_index][index][k] + (self.beta * cos_sim)
                 final_grad[s:e] = final_grad[s:e] + grad_k
         return final_grad
-        
+
     def update_fn(self, images, labels, model, optimizer):
         optimizer.zero_grad()
 
@@ -114,13 +90,14 @@ class GradVacc(Solver):
         results = dict()
         beta = np.array([1e-2, 1e-3, 1e-1, 1e-4, 5e-2])
 
-
         for i in range(self.flags.n_preferences):
             s_t = time()
             self.beta = beta[i]
 
             model = self.configure_model()
-            optimizer = torch.optim.SGD(model.parameters(), lr=self.flags.lr, momentum=self.flags.momentum)
+            optimizer = torch.optim.SGD(
+                model.parameters(), lr=self.flags.lr, momentum=self.flags.momentum
+            )
 
             #  initial exponential moving average grad sim pairs
             optimizer.zero_grad()
@@ -134,21 +111,35 @@ class GradVacc(Solver):
                     if m not in grad_sim_dict.keys():
                         grad_sim_dict[m] = {}
                     for j in range(self.dataset_config.n_tasks):
+<<<<<<< HEAD
                         if j not in grad_sim_dict[m].keys():
                             grad_sim_dict[m][j] = dict()
                         if (m != j):
                             grad_sim_dict[m][j][k] = torch.tensor(0.0).cuda()
             
+=======
+                        if j not in grad_sim_dict[i].keys():
+                            grad_sim_dict[i][j] = dict()
+                        if i != j:
+                            grad_sim_dict[i][j][k] = torch.tensor(0.0).cuda()
+
+>>>>>>> 5bdd9ba595aadfcb219aa86296ff65d79ca56399
             self.grad_sim_dict = grad_sim_dict
             print(self.grad_sim_dict)
             result, checkpoint = self.train(model, optimizer)
             results[i] = dict(r=None, res=result, checkpoint=checkpoint)
+<<<<<<< HEAD
             self.dump(results, self.prefix + f"_{self.flags.n_preferences}_from_0-{i}.pkl")
             for m in self.grad_sim_dict.keys():
                 for j in self.grad_sim_dict[m].keys():
                     for k in self.grad_sim_dict[m][j].keys():
                         self.grad_sim_dict[m][j][k] = np.asarray(self.grad_sim_dict[m][j][k].detach().cpu())
             self.dump(self.grad_sim_dict, self.prefix + f"_{self.flags.n_preferences}_gradsim_dict_from_0-{i}.pkl")
+=======
+            self.dump(
+                results, self.prefix + f"_{self.flags.n_preferences}_from_0-{i}.pkl"
+            )
+>>>>>>> 5bdd9ba595aadfcb219aa86296ff65d79ca56399
 
         total_time = timedelta(seconds=round(time() - start_time))
         print(f"**** Time taken for {self.name} on {self.dataset} = {total_time}s.")

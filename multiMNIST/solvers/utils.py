@@ -1,4 +1,38 @@
 import numpy as np
+import torch
+
+
+# https://discuss.pytorch.org/t/how-to-flatten-and-then-unflatten-all-model-parameters/34730
+def flatten_grad(parameters):
+    l = []
+    indices = []
+    shapes = []
+    s = 0
+    for p in parameters:
+        if p.grad is None:
+            shapes.append(None)
+            continue
+        shapes.append(p.grad.shape)
+        p = torch.flatten(p.grad)
+        size = p.shape[0]
+        l.append(p)
+        indices.append((s, s + size))
+        s += size
+    flat = torch.cat(l).view(-1)
+    return {"grad": flat, "indices": indices, "shapes": shapes}
+
+
+def recover_flattened(flat_grad, indices, shapes):
+    l = [flat_grad[s:e] for (s, e) in indices]
+    grads = []
+    index = 0
+    for i in range(len(shapes)):
+        if shapes[i] is None:
+            grads.append(None)
+            continue
+        grads.append(l[index].view(shapes[i]))
+        index += 1
+    return grads
 
 
 def getNumParams(params):
@@ -11,7 +45,9 @@ def getNumParams(params):
     return numParams, numTrainable
 
 
-def rand_unit_vectors(ndims: int, num_vectors: int = 1, absolute: bool = True) -> np.ndarray:
+def rand_unit_vectors(
+    ndims: int, num_vectors: int = 1, absolute: bool = True
+) -> np.ndarray:
     """Return a uniformly random unit vector.
 
     Args:
@@ -48,3 +84,36 @@ def circle_points_(r, n):
         y = r * np.sin(t)
         circles.append(np.c_[x, y])
     return circles
+
+
+def cosine_angle(v: torch.Tensor, w: torch.Tensor) -> float:
+    """Return the cosine angle between vectors v and w
+    Args:
+        v, w (torch.Tensor): Vectors between which angle is to be caclulated
+    Returns:
+        (float): cos(Θ)
+    """
+    return torch.dot(v, w) / (torch.norm(v) * torch.norm(w))
+
+
+def gmsim(v: torch.Tensor, w: torch.Tensor) -> float:
+    """Return the gradient magnitude similarity between gradients v and w
+    Args:
+        v, w (torch.Tensor)
+    Returns:
+        (float)
+    """
+    v_norm = torch.norm(v)
+    w_norm = torch.norm(w)
+    return 2 * v_norm * w_norm / (v_norm ** 2 + w_norm ** 2)
+
+
+def mtc_bound(v: torch.Tensor, w: torch.Tensor) -> float:
+    """Return the multi-task curvature bounding measure
+    Args:
+        v, w (torch.Tensor)
+    Returns:
+        (float)
+    """
+    angle = cosine_angle(v, w)
+    return (1 - angle ** 2) * (torch.norm(v - w) ** 2 / torch.norm(v + w) ** 2)
