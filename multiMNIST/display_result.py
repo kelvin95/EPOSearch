@@ -6,36 +6,45 @@ import matplotlib.pyplot as plt
 from brokenaxes import brokenaxes
 from latex_utils import latexify
 
-baseline = "indiv"
-methods = ["epo", 
-            # "PMTL", 
+baseline = "individual"
+methods = ["epo",
+            "pmtl",
             "linscalar",
             "gradnorm",
             "graddrop",
             "itmtl",
             "mgda",
-            "pcgrad"]
-markers = {"epo": "*", 
-            "pmtl": "^", 
-            "linscalar": "s", 
+            "pcgrad",
+            "graddrop_deterministic",
+            "graddrop_random",
+            ]
+markers = {"epo": "*",
+            "pmtl": "^",
+            "linscalar": "s",
             "gradnorm": "v",
             "graddrop":"1",
             "itmtl":"p",
             "mgda":"+",
             "pcgrad":"D",
-            "indiv": "o"}
-msz = {"epo": 45, 
-        # "PMTL": 30, 
-        "linscalar": 25, 
+            "indiv": "o",
+            "graddrop_random":"2",
+            "graddrop_deterministic":"3",
+            }
+msz = {"epo": 45,
+        "pmtl": 30,
+        "linscalar": 25,
         "gradnorm": 30,
         "graddrop":30,
         "itmtl":30,
         "mgda":30,
         "pcgrad":30,
-        "indiv": "o"}
-datasets = ["mnist", 
-    "fashion", 
-    # "fashion_and_mnist"
+        "indiv": "o",
+        "graddrop_random": 30,
+        "graddrop_deterministic": 30,
+        }
+datasets = ["mnist",
+    "fashion",
+    "fashion_and_mnist"
     ]
 model = 'lenet'
 niters, nprefs = 100, 5
@@ -48,7 +57,7 @@ for dataset in datasets:
     for method in [baseline] + methods:
         print(f"\t{method}")
         file_pfx = f"{method}_{dataset}_{model}_{niters}"
-        file_sfx = "" if method == 'indiv' else f"_{nprefs}_from_0-{nprefs-1}"
+        file_sfx = "" if method == 'individual' else f"_{nprefs}_from_0-{nprefs-1}"
         file = file_pfx + file_sfx + ".pkl"
         results = pkl.load(open(os.path.join(folder, file), 'rb'))
         last_ls, last_acs, rs = [], [], []
@@ -75,7 +84,7 @@ for dataset in datasets:
             if dataset == "fashion":
                 print(last_ls)
 
-        if method == "indiv":
+        if method == "individual":
             data[dataset]["baseline_loss"] = []
             data[dataset]["baseline_acc"] = []
             for i, r in enumerate(rs):
