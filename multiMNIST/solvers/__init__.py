@@ -4,6 +4,8 @@ from .graddrop_random import GradDropRandom
 from .graddrop_deterministic import GradDropDeterministic
 from .gradnorm import GradNorm
 from .gradvacc import GradVacc
+from .gradortho import GradOrtho
+from .gradalign import GradAlign
 from .individual import Individual
 from .itmtl import ITMTL
 from .linscalar import LinScalar
@@ -18,6 +20,8 @@ SOLVER_FACTORY = {
     "graddrop_deterministic": GradDropDeterministic,
     "gradnorm": GradNorm,
     "gradvacc": GradVacc,
+    "gradortho": GradOrtho,
+    "gradalign": GradAlign,
     "individual": Individual,
     "itmtl": ITMTL,
     "linscalar": LinScalar,

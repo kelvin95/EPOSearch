@@ -148,6 +148,9 @@ class MTLLeNet(MTLModel):
             return logits[:, :, task_id]
         return logits
 
+    def get_last_shared_layer(self):
+        return self.net[-1].named_parameters()
+
     def get_shared_parameters(self) -> Dict[str, torch.nn.Parameter]:
         return {k: v for k, v in self.net.named_parameters()}
 
