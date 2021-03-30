@@ -2,6 +2,39 @@ import numpy as np
 import torch
 
 
+# https://discuss.pytorch.org/t/how-to-flatten-and-then-unflatten-all-model-parameters/34730
+def flatten_grad(parameters):
+    l = []
+    indices = []
+    shapes = []
+    s = 0
+    for p in parameters:
+        if p.grad is None:
+            shapes.append(None)
+            continue
+        shapes.append(p.grad.shape)
+        p = torch.flatten(p.grad)
+        size = p.shape[0]
+        l.append(p)
+        indices.append((s, s + size))
+        s += size
+    flat = torch.cat(l).view(-1)
+    return {"grad": flat, "indices": indices, "shapes": shapes}
+
+
+def recover_flattened(flat_grad, indices, shapes):
+    l = [flat_grad[s:e] for (s, e) in indices]
+    grads = []
+    index = 0
+    for i in range(len(shapes)):
+        if shapes[i] is None:
+            grads.append(None)
+            continue
+        grads.append(l[index].view(shapes[i]))
+        index += 1
+    return grads
+
+
 def getNumParams(params):
     numParams, numTrainable = 0, 0
     for param in params:
