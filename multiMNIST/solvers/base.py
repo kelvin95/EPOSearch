@@ -158,9 +158,20 @@ class Solver(object):
 
     def dump(self, contents, filename):
         """Dump contents to filename"""
+        def convert_to_cpu(result):
+            if isinstance(result, np.ndarray):
+                return result
+            if torch.is_tensor(result):
+                return result.cpu()
+            if isinstance(result, dict):
+                return {k: convert_to_cpu(v) for k, v in result.items()}
+            if isinstance(result, list):
+                return [convert_to_cpu(x) for x in result]
+            return result
+
         fpath = Path(self.flags.outdir, filename)
         with open(fpath, "wb") as f:
-            pickle.dump(contents, f)
+            pickle.dump(convert_to_cpu(contents), f)
 
     def run(self):
         """Run a complete training phase.
