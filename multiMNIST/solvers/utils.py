@@ -1,4 +1,5 @@
 import numpy as np
+import torch
 
 
 def getNumParams(params):
@@ -11,7 +12,9 @@ def getNumParams(params):
     return numParams, numTrainable
 
 
-def rand_unit_vectors(ndims: int, num_vectors: int = 1, absolute: bool = True) -> np.ndarray:
+def rand_unit_vectors(
+    ndims: int, num_vectors: int = 1, absolute: bool = True
+) -> np.ndarray:
     """Return a uniformly random unit vector.
 
     Args:
@@ -48,3 +51,36 @@ def circle_points_(r, n):
         y = r * np.sin(t)
         circles.append(np.c_[x, y])
     return circles
+
+
+def cosine_angle(v: torch.Tensor, w: torch.Tensor) -> float:
+    """Return the cosine angle between vectors v and w
+    Args:
+        v, w (torch.Tensor): Vectors between which angle is to be caclulated
+    Returns:
+        (float): cos(Θ)
+    """
+    return torch.dot(v, w) / (torch.norm(v) * torch.norm(w))
+
+
+def gmsim(v: torch.Tensor, w: torch.Tensor) -> float:
+    """Return the gradient magnitude similarity between gradients v and w
+    Args:
+        v, w (torch.Tensor)
+    Returns:
+        (float)
+    """
+    v_norm = torch.norm(v)
+    w_norm = torch.norm(w)
+    return 2 * v_norm * w_norm / (v_norm ** 2 + w_norm ** 2)
+
+
+def mtc_bound(v: torch.Tensor, w: torch.Tensor) -> float:
+    """Return the multi-task curvature bounding measure
+    Args:
+        v, w (torch.Tensor)
+    Returns:
+        (float)
+    """
+    angle = cosine_angle(v, w)
+    return (1 - angle ** 2) * (torch.norm(v - w) ** 2 / torch.norm(v + w) ** 2)
