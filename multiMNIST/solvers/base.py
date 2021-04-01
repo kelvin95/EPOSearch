@@ -1,15 +1,21 @@
 import torch
+from torch import optim
+from torch.autograd import grad
 import torch.nn as nn
-from torch.utils.data import DataLoader
+from torch.utils.tensorboard import SummaryWriter
 from torch.optim import Optimizer
 import numpy as np
 import copy
 import pickle
-from typing import List, Tuple, Dict, Any, Union
+from datetime import datetime
+from socket import gethostname
+from itertools import combinations
+from typing import List, Tuple, Dict, Any, Union, overload
 from pathlib import Path
 
 from .models import MTLModel, MTLModelWithCELoss, MTLLeNet, MTLResNet18
 from .dataset import get_dataset_config, load_dataset
+from .utils import cosine_angle, flatten_parameters, flatten_grad, gmsim, overload_print
 
 
 class Solver(object):
@@ -19,12 +25,19 @@ class Solver(object):
         """Initialize solver with parsed flags"""
         # copy to avoid mutating unexpectedly
         self.flags = copy.deepcopy(flags)
+        self.set_random_seed()
 
         self.dataset = dataset_name
         self.dataset_config = get_dataset_config(dataset_name)
         self.train_loader, self.test_loader = load_dataset(
             self.dataset_config, self.flags.batch_size, self.flags.n_workers
         )
+        self.configure_writer()
+
+    def set_random_seed(self):
+        torch.manual_seed(self.flags.seed)
+        np.random.seed(self.flags.seed)
+        # random.seed(self.flags.seed)
 
     @property
     def name(self):
@@ -40,7 +53,20 @@ class Solver(object):
             return torch.device("cuda")
         return torch.device("cpu")
 
-    def configure_model(self, with_ce_loss: bool = True) -> Union[MTLModel, MTLModelWithCELoss]:
+    def configure_writer(self) -> None:
+        """Configure tensorboard summary writer"""
+        current_time = datetime.now().strftime("%b%d_%H:%M:%S")
+        hostname = gethostname()
+        basename = "-".join([current_time, hostname, self.prefix])
+        log_dir = Path(self.flags.outdir, basename)
+        log_dir.mkdir(parents=True, exist_ok=True)
+        writer = SummaryWriter(log_dir=log_dir, flush_secs=120)
+        self.writer = writer
+        self.logdir = log_dir
+
+    def configure_model(
+        self, with_ce_loss: bool = True
+    ) -> Union[MTLModel, MTLModelWithCELoss]:
         """Return a configured MTL model."""
         if self.flags.arch == "resnet18":
             model = MTLResNet18(
@@ -86,8 +112,70 @@ class Solver(object):
         """
         raise NotImplementedError
 
+    def update_with_metrics(
+        self,
+        X: torch.Tensor,
+        Y: torch.Tensor,
+        model: nn.Module,
+        optimizer: Optimizer,
+        global_step: int = None,
+        metrics: bool = False,
+    ) -> None:
+        """Wrapped update to compute metrics like the multi-task curvature etc."""
+        if not metrics:
+            self.update_fn(X, Y, model, optimizer)
+            return
+
+        loss_before = model(X, Y).detach().clone()
+        theta_before = flatten_parameters(model.parameters())
+        self.update_fn(X, Y, model, optimizer)
+        # after update, the grad attribute contains non-zero grad
+        flat_grads = flatten_grad(model.parameters())["grad"]
+        theta_after = flatten_parameters(model.parameters())
+        loss_after = model(X, Y)
+        mtc = 2 * (
+            (loss_after.detach().clone() - loss_before).sum()
+            - torch.dot(flat_grads, theta_after - theta_before).detach().clone()
+        )
+        self.writer.add_scalar("multi-task curvature", mtc, global_step)
+        self.log_pairwise_metrics(loss_after, model, optimizer, global_step)
+
+    def log_pairwise_metrics(
+        self,
+        task_losses: torch.Tensor,
+        model: nn.Module,
+        optimizer: Optimizer,
+        global_step: int = None,
+    ) -> None:
+        flat_grads = []
+        for i in range(self.dataset_config.n_tasks):
+            optimizer.zero_grad()
+            task_losses[i].backward(retain_graph=True)
+            flat_grads.append((i, flatten_grad(model.parameters())["grad"]))
+
+        # clear graph
+        optimizer.zero_grad()
+        del task_losses
+
+        for t in combinations(flat_grads, 2):
+            (i, grad_i), (j, grad_j) = t
+            main_tag = f"Tasks {i}, {j}"
+            tag_scalar_dict = {
+                "cosine_angle": cosine_angle(grad_i, grad_j),
+                "grad. magnitude sim.": gmsim(grad_i, grad_j),
+            }
+            if self.flags.debug:
+                print(f"{main_tag} [{global_step}]: {tag_scalar_dict}")
+            self.writer.add_scalars(
+                main_tag,
+                tag_scalar_dict,
+                global_step,
+            )
+
     def train(
-        self, model: nn.Module, optimizer: Optimizer,
+        self,
+        model: nn.Module,
+        optimizer: Optimizer,
     ) -> Tuple[Dict[str, List[float]], Dict[str, torch.Tensor]]:
         """Train model"""
         self.pretrain(model, optimizer)
@@ -100,12 +188,19 @@ class Solver(object):
 
             model.train()
             for index, (images, labels) in enumerate(self.train_loader):
+                global_step = epoch * len(self.train_loader) + index
                 if torch.cuda.is_available():
                     images = images.cuda(non_blocking=True)
                     labels = labels.cuda(non_blocking=True)
-                self.update_fn(images, labels, model, optimizer)
+                # self.update_fn(images, labels, model, optimizer)
+                self.update_with_metrics(
+                    images, labels, model, optimizer, global_step, True
+                )
 
-                if self.flags.log_frequency > 0 and index % self.flags.log_frequency == 0:
+                if (
+                    self.flags.log_frequency > 0
+                    and index % self.flags.log_frequency == 0
+                ):
                     with torch.no_grad():
                         task_losses = model(images, labels)
                     print(
@@ -121,7 +216,7 @@ class Solver(object):
                 model.eval()
 
                 valid_loss = []
-                valid_accuracy = 0.
+                valid_accuracy = 0.0
                 for _, (images, labels) in enumerate(self.test_loader):
                     if torch.cuda.is_available():
                         images = images.cuda(non_blocking=True)
@@ -133,7 +228,7 @@ class Solver(object):
                     if logits.size(1) > 1:
                         predictions = torch.argmax(logits, dim=1)
                     else:
-                        predictions = (logits >= 0.)[:, 0]
+                        predictions = (logits >= 0.0)[:, 0]
 
                     valid_loss.append(loss)
                     valid_accuracy += torch.sum(predictions.eq(labels), dim=0)
@@ -158,6 +253,7 @@ class Solver(object):
 
     def dump(self, contents, filename):
         """Dump contents to filename"""
+
         def convert_to_cpu(result):
             if isinstance(result, np.ndarray):
                 return result
@@ -169,9 +265,14 @@ class Solver(object):
                 return [convert_to_cpu(x) for x in result]
             return result
 
-        fpath = Path(self.flags.outdir, filename)
+        fpath = Path(self.logdir, filename)
         with open(fpath, "wb") as f:
             pickle.dump(convert_to_cpu(contents), f)
+
+    def wrapped_run(self):
+        """Execute the run method with some logging wrapper"""
+        with overload_print(self.logdir.joinpath("train.log"), "w"):
+            self.run()
 
     def run(self):
         """Run a complete training phase.
