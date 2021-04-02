@@ -58,32 +58,34 @@ class GradOrtho(Solver):
         task_losses = model(images, labels)
         alpha = torch.from_numpy(self.preference).to(self.device)
         weighted_loss = torch.sum(task_losses * alpha)  # * 5. * max(epo_lp.mu_rl, 0.2)
-        
+        weighted_loss.backward(retain_graph=True)
         
         # obtain and store the gradient for each task
         flat_grads = list()
         for i in range(self.dataset_config.n_tasks):
-            optimizer.zero_grad()
+            # optimizer.zero_grad()
             last_layer = model.model.get_last_shared_layer()
             for name, param in last_layer:
                 if name in ["weight"]:
-                    gygw = torch.autograd.grad(task_losses[i], param, retain_graph=True)
+                    gygw = torch.autograd.grad(task_losses[i], param, create_graph=True)
+                    
             # normalize
             flat_grads.append( gygw[0].flatten() / torch.linalg.norm(gygw[0].flatten()))
-        optimizer.zero_grad()
+        
+        # optimizer.zero_grad()
         # compute the cos similarity between tasks for the gradients on the shared parameters
-        running_sum = torch.tensor(0.0).cuda()
+        running_sum = torch.tensor(0.0, requires_grad=True).cuda()
         for i, i_grad in enumerate(flat_grads):
             for j, j_grad in enumerate(flat_grads): 
                 if i != j:
                     cos_sim_2 = torch.dot(i_grad, j_grad) ** 2
                     running_sum += cos_sim_2
+                    
                     self.running_grad_sim_dict[i][j]["running_sum"].append(np.asarray(cos_sim_2.detach().cpu()))
 
-        # penalize it as a losss
-        total_loss = weighted_loss + self.cos_penalty / (self.dataset_config.n_tasks*(self.dataset_config.n_tasks-1)) * running_sum
-        total_loss.backward()
-
+        # minimize the cos similarity
+        cos_align_loss = (self.cos_penalty / (self.dataset_config.n_tasks*(self.dataset_config.n_tasks-1)) * running_sum)
+        cos_align_loss.backward()
         optimizer.step()
 
 
@@ -97,7 +99,7 @@ class GradOrtho(Solver):
         for i, preference in enumerate(preferences):
             self.preference = preference
             s_t = time()
-            self.cos_penalty = 10
+            self.cos_penalty = 1
             model = self.configure_model()
             optimizer = torch.optim.SGD(model.parameters(), lr=self.flags.lr, momentum=self.flags.momentum)
 
