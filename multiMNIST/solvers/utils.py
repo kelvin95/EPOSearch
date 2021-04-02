@@ -1,5 +1,49 @@
 import numpy as np
 import torch
+import sys
+from contextlib import contextmanager
+
+
+@contextmanager
+def overload_print(name, mode):
+    """Overload print function in this context with logging to file + stdout"""
+    tee_file = TeeNoFile(name, mode)
+    try:
+        yield tee_file
+    finally:
+        tee_file.close()
+
+
+# NOTE: do NOT inherit from file
+class TeeNoFile(object):
+    def __init__(self, name, mode):
+        self.file = open(name, mode)
+        self.stdout = sys.stdout
+        sys.stdout = self
+
+    def close(self):
+        if self.stdout is not None:
+            sys.stdout = self.stdout
+            self.stdout = None
+        if self.file is not None:
+            self.file.close()
+            self.file = None
+
+    def write(self, data):
+        self.file.write(data)
+        self.stdout.write(data)
+
+    def flush(self):
+        self.file.flush()
+        self.stdout.flush()
+
+    def __del__(self):
+        self.close()
+
+
+def flatten_parameters(parameters):
+    """flatten copy of parameters"""
+    return torch.cat([torch.flatten(p.data.detach().clone()) for p in parameters])
 
 
 # https://discuss.pytorch.org/t/how-to-flatten-and-then-unflatten-all-model-parameters/34730

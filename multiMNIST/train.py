@@ -25,11 +25,21 @@ flags.DEFINE_multi_enum(
     ["mnist", "fashion", "fashion_and_mnist", "all", "celeba", "cifar10", "cifar100"],
     "name of dataset to use",
 )
-flags.DEFINE_string("outdir", "out", "Output dir to save results")
+flags.DEFINE_string("outdir", "runs", "Output dir to save results")
 flags.DEFINE_enum("arch", "lenet", ["lenet", "resnet18"], "network architecture to use")
 flags.DEFINE_enum(
-    "solver", "epo", list(SOLVER_FACTORY.keys()), "name of method/solver",
+    "init",
+    "xavier",
+    ["xavier", "uniform", "normal", "kaiming"],
+    "weight initialization method",
 )
+flags.DEFINE_enum(
+    "solver",
+    "epo",
+    list(SOLVER_FACTORY.keys()),
+    "name of method/solver",
+)
+flags.DEFINE_integer("seed", 46848, "Seed for reproducibility")
 flags.DEFINE_boolean("debug", False, "Produces debugging output.")
 
 
@@ -49,7 +59,8 @@ def main(argv):
     start = time()
     for dataset in FLAGS.dset[:]:
         solver = SOLVER_FACTORY[FLAGS.solver](dataset, FLAGS)
-        solver.run()
+        # solver.run()
+        solver.wrapped_run()
     total = round(time() - start)
     print(f"**** Datasets: {FLAGS.dset}, Solver: {FLAGS.solver}")
     print(f"**** Total time: {timedelta(seconds=total)}")
