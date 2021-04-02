@@ -6,9 +6,9 @@ import matplotlib.pyplot as plt
 from brokenaxes import brokenaxes
 from latex_utils import latexify
 
-baseline = "individual"
-methods = ["epo",
-            "pmtl",
+baseline = "indiv"
+methods = ["epo", 
+            # "pmtl", 
             "linscalar",
             "gradnorm",
             "graddrop",
@@ -26,24 +26,18 @@ markers = {"epo": "*",
             "itmtl":"p",
             "mgda":"+",
             "pcgrad":"D",
-            "indiv": "o",
-            "graddrop_random":"2",
-            "graddrop_deterministic":"3",
-            }
-msz = {"epo": 45,
-        "pmtl": 30,
-        "linscalar": 25,
+            "indiv": "o"}
+msz = {"epo": 45, 
+        "pmtl": 30, 
+        "linscalar": 25, 
         "gradnorm": 30,
         "graddrop":30,
         "itmtl":30,
         "mgda":30,
         "pcgrad":30,
-        "indiv": "o",
-        "graddrop_random": 30,
-        "graddrop_deterministic": 30,
-        }
-datasets = ["mnist",
-    "fashion",
+        "indiv": "o"}
+datasets = ["mnist", 
+    "fashion", 
     "fashion_and_mnist"
     ]
 model = 'lenet'
@@ -105,6 +99,10 @@ for dataset in datasets:
     fig = plt.figure()
     max1x, max1y = data[dataset]["max1"]
     max2x, max2y = data[dataset]["max2"]
+    max2x = 0.7
+    max2y = 0.7
+    max1x = 1.0
+    max1y = 1.0
     ax = brokenaxes(xlims=((-.05, max2x + .05), (max1x - .1, max1x + .15)),
                     ylims=((-.05, max2y + .05), (max1y - .1, max1y + .1)),
                     hspace=0.05, wspace=0.05, fig=fig)
@@ -132,12 +130,13 @@ for dataset in datasets:
                  color=colors[-1], lw=1, head_width=.04, alpha=0.5)
 
     for method in methods:
+        print(method)
         last_ls = data[dataset][method]["last_ls"]
-        s = 40 if method == "epo" else 30
+        s = 20 if method == "epo" else 20
         ax.scatter(last_ls[:, 0], last_ls[:, 1], marker=markers[method],
                    c=colors, s=msz[method] , label=method)
 
-    if dataset == "fashion":
+    if dataset in ["mnist", "fashion_and_mnist"]:
         ax.legend()
 
     fig.savefig(f"figures/{dataset}_loss.pdf")
