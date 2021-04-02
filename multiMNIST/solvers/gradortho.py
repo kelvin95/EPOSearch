@@ -98,10 +98,14 @@ class GradOrtho(Solver):
         print(f"**** Now running {self.name} on {self.dataset} ... ")
         start_time = time()
         results = dict()
-        preferences = rand_unit_vectors(
-            self.dataset_config.n_tasks, self.flags.n_preferences, True
-        )
-
+        preferences = rand_unit_vectors(self.dataset_config.n_tasks, self.flags.n_preferences, True)
+        # fix the preferences 
+        fixed_preferences = np.asarray([[np.sqrt(0.2), np.sqrt(0.8)],
+                                        [np.sqrt(0.6), np.sqrt(0.4)],
+                                        [np.sqrt(0.5), np.sqrt(0.5)],
+                                        [np.sqrt(0.4), np.sqrt(0.6)],
+                                        [np.sqrt(0.8), np.sqrt(0.2)]])
+        preferences = fixed_preferences
         for i, preference in enumerate(preferences):
             self.preference = preference
             self.suffix = f"p{i}"

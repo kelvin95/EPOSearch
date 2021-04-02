@@ -7,16 +7,20 @@ from brokenaxes import brokenaxes
 from latex_utils import latexify
 
 baseline = "indiv"
-methods = ["epo", 
+methods = [
+            # "epo", 
             # "pmtl", 
             "linscalar",
-            "gradnorm",
-            "graddrop",
-            "itmtl",
-            "mgda",
-            "pcgrad",
-            "graddrop_deterministic",
-            "graddrop_random",
+            # "gradnorm",
+            "gradortho",
+            "gradalign",
+            # "gradvacc",
+            # "graddrop",
+            # "itmtl",
+            # "mgda",
+            # "pcgrad",
+            # "graddrop_deterministic",
+            # "graddrop_random",
             ]
 markers = {"epo": "*",
             "pmtl": "^",
@@ -91,14 +95,14 @@ for dataset in datasets:
                 data[dataset]["baseline_loss"].append((lxs, lys))
                 data[dataset]["baseline_acc"].append((axs, ays))
 
-
+import pdb; pdb.set_trace()
 # latexify(fig_width=2.25, fig_height=1.5)
 from matplotlib import rc
 rc("text", usetex=False)
 for dataset in datasets:
     fig = plt.figure()
-    max1x, max1y = data[dataset]["max1"]
-    max2x, max2y = data[dataset]["max2"]
+    # max1x, max1y = data[dataset]["max1"]
+    # max2x, max2y = data[dataset]["max2"]
     max2x = 0.7
     max2y = 0.7
     max1x = 1.0
@@ -165,7 +169,7 @@ for dataset in datasets:
     for method in methods:
         last_acs = data[dataset][method]["last_acs"]
         label = method #if dataset == "fashion_and_mnist" else ""
-        s = 40 if method == "epo" else 30
+        s = 30 if method == "epo" else 30
         ax.scatter(last_acs[:, 0], last_acs[:, 1], marker=markers[method],
                    c=colors, s=msz[method], label=label)
 

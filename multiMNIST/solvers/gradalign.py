@@ -29,16 +29,14 @@ class GradAlign(Solver):
         # obtain and store the gradient for each task
         flat_grads = list()
         for i in range(self.dataset_config.n_tasks):
-            # optimizer.zero_grad()
             last_layer = model.model.get_last_shared_layer()
             for name, param in last_layer:
                 if name in ["weight"]:
                     gygw = torch.autograd.grad(task_losses[i], param, create_graph=True)
 
             # normalize
-            flat_grads.append(gygw[0].flatten() / torch.linalg.norm(gygw[0].flatten()))
-
-        # optimizer.zero_grad()
+            flat_grads.append( gygw[0].flatten() / torch.linalg.norm(gygw[0].flatten()))
+        
         # compute the cos similarity between tasks for the gradients on the shared parameters
         running_sum = torch.tensor(0.0, requires_grad=True).cuda()
         for i, i_grad in enumerate(flat_grads):
@@ -65,10 +63,15 @@ class GradAlign(Solver):
         print(f"**** Now running {self.name} on {self.dataset} ... ")
         start_time = time()
         results = dict()
-        preferences = rand_unit_vectors(
-            self.dataset_config.n_tasks, self.flags.n_preferences, True
-        )
-
+        preferences = rand_unit_vectors(self.dataset_config.n_tasks, self.flags.n_preferences, True)
+        # fix the preferences 
+        fixed_preferences = np.asarray([[np.sqrt(0.2), np.sqrt(0.8)],
+                                        [np.sqrt(0.6), np.sqrt(0.4)],
+                                        [np.sqrt(0.5), np.sqrt(0.5)],
+                                        [np.sqrt(0.4), np.sqrt(0.6)],
+                                        [np.sqrt(0.8), np.sqrt(0.2)]])
+        preferences = fixed_preferences
+        print(preferences)
         for i, preference in enumerate(preferences):
             self.preference = preference
             self.suffix = f"p{i}"
