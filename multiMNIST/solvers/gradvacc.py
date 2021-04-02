@@ -44,7 +44,9 @@ class GradVacc(Solver):
                 for index in indices:
                     other_grad = gradients[index][s:e]
                     other_grad_k_norm = torch.linalg.norm(other_grad)
-                    cos_sim = torch.dot(grad_k, other_grad) / (grad_k_norm * other_grad_k_norm)
+                    cos_sim = torch.dot(grad_k, other_grad) / (
+                        grad_k_norm * other_grad_k_norm
+                    )
                     ema_cos_sim = self.grad_sim_dict[grad_index][index][k]
                     if cos_sim < ema_cos_sim:
                         coeff = compute_grad_coeff(
@@ -92,6 +94,7 @@ class GradVacc(Solver):
 
         for i in range(self.flags.n_preferences):
             s_t = time()
+            self.suffix = f"p{i}"
             self.beta = beta[i]
 
             model = self.configure_model()
@@ -113,19 +116,27 @@ class GradVacc(Solver):
                     for j in range(self.dataset_config.n_tasks):
                         if j not in grad_sim_dict[m].keys():
                             grad_sim_dict[m][j] = dict()
-                        if (m != j):
+                        if m != j:
                             grad_sim_dict[m][j][k] = torch.tensor(0.0).cuda()
-            
+
             self.grad_sim_dict = grad_sim_dict
             print(self.grad_sim_dict)
             result, checkpoint = self.train(model, optimizer)
             results[i] = dict(r=None, res=result, checkpoint=checkpoint)
-            self.dump(results, self.prefix + f"_{self.flags.n_preferences}_from_0-{i}.pkl")
+            self.dump(
+                results, self.prefix + f"_{self.flags.n_preferences}_from_0-{i}.pkl"
+            )
             for m in self.grad_sim_dict.keys():
                 for j in self.grad_sim_dict[m].keys():
                     for k in self.grad_sim_dict[m][j].keys():
-                        self.grad_sim_dict[m][j][k] = np.asarray(self.grad_sim_dict[m][j][k].detach().cpu())
-            self.dump(self.grad_sim_dict, self.prefix + f"_{self.flags.n_preferences}_gradsim_dict_from_0-{i}.pkl")
+                        self.grad_sim_dict[m][j][k] = np.asarray(
+                            self.grad_sim_dict[m][j][k].detach().cpu()
+                        )
+            self.dump(
+                self.grad_sim_dict,
+                self.prefix
+                + f"_{self.flags.n_preferences}_gradsim_dict_from_0-{i}.pkl",
+            )
 
         total_time = timedelta(seconds=round(time() - start_time))
         print(f"**** Time taken for {self.name} on {self.dataset} = {total_time}s.")

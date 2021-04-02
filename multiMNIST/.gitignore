@@ -3,3 +3,4 @@ checkpoints/
 *.zip
 
 fire.sh
+runs/

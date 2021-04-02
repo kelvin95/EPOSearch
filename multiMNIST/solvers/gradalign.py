@@ -13,40 +13,6 @@ from .utils import rand_unit_vectors
 from time import time
 from datetime import timedelta
 
-# copied from
-# https://discuss.pytorch.org/t/how-to-flatten-and-then-unflatten-all-model-parameters/34730
-def flatten_grad(parameters):
-    l = []
-    indices = []
-    shapes = []
-    s = 0
-    for p in parameters:
-        if p.grad is None:
-            shapes.append(None)
-            continue
-        shapes.append(p.grad.shape)
-        p = torch.flatten(p.grad)
-        size = p.shape[0]
-        l.append(p)
-        indices.append((s, s + size))
-        s += size
-    flat = torch.cat(l).view(-1)
-    return {"grad": flat, "indices": indices, "shapes": shapes}
-
-
-def recover_flattened(flat_grad, indices, shapes):
-    l = [flat_grad[s:e] for (s, e) in indices]
-    grads = []
-    index = 0
-    for i in range(len(shapes)):
-        if shapes[i] is None:
-            grads.append(None)
-            continue
-        grads.append(l[index].view(shapes[i]))
-        index += 1
-    return grads
-
-
 
 class GradAlign(Solver):
     @property
@@ -58,8 +24,8 @@ class GradAlign(Solver):
         task_losses = model(images, labels)
         alpha = torch.from_numpy(self.preference).to(self.device)
         weighted_loss = torch.sum(task_losses * alpha)  # * 5. * max(epo_lp.mu_rl, 0.2)
-        
-        
+
+
         # obtain and store the gradient for each task
         flat_grads = list()
         for i in range(self.dataset_config.n_tasks):
@@ -74,7 +40,7 @@ class GradAlign(Solver):
         # compute the cos similarity between tasks for the gradients on the shared parameters
         running_sum = torch.tensor(0.0).cuda()
         for i, i_grad in enumerate(flat_grads):
-            for j, j_grad in enumerate(flat_grads): 
+            for j, j_grad in enumerate(flat_grads):
                 if i != j:
                     cos_sim_2 = torch.dot(i_grad, j_grad) ** 2
                     running_sum += cos_sim_2
@@ -96,6 +62,7 @@ class GradAlign(Solver):
 
         for i, preference in enumerate(preferences):
             self.preference = preference
+            self.suffix = f"p{i}"
             s_t = time()
             self.cos_penalty = 10
             model = self.configure_model()
@@ -111,7 +78,7 @@ class GradAlign(Solver):
                     if j not in grad_sim_dict[m].keys():
                         grad_sim_dict[m][j] = dict()
                         grad_sim_dict[m][j]["running_sum"] = list()
-            
+
             self.running_grad_sim_dict = grad_sim_dict
             print(self.running_grad_sim_dict)
             result, checkpoint = self.train(model, optimizer)

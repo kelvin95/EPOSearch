@@ -65,6 +65,7 @@ class GradNorm(Solver):
         alphas = np.arange(0, 1.1, 1.0 / max(1, self.flags.n_preferences - 1))
         for i, alpha in enumerate(alphas):
             self.alpha = alpha
+            self.suffix = f"p{i}"
             self.initial_task_loss = None
             model = self.configure_model()
 

@@ -68,6 +68,7 @@ class PCGrad(Solver):
         start_time = time()
         results = dict()
         for i in range(self.flags.n_preferences):
+            self.suffix = f"p{i}"
             s_t = time()
             model = self.configure_model()
             optimizer = torch.optim.SGD(

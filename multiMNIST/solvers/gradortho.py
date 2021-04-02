@@ -47,7 +47,6 @@ def recover_flattened(flat_grad, indices, shapes):
     return grads
 
 
-
 class GradOrtho(Solver):
     @property
     def name(self):
@@ -58,8 +57,7 @@ class GradOrtho(Solver):
         task_losses = model(images, labels)
         alpha = torch.from_numpy(self.preference).to(self.device)
         weighted_loss = torch.sum(task_losses * alpha)  # * 5. * max(epo_lp.mu_rl, 0.2)
-        
-        
+
         # obtain and store the gradient for each task
         flat_grads = list()
         for i in range(self.dataset_config.n_tasks):
@@ -69,37 +67,48 @@ class GradOrtho(Solver):
                 if name in ["weight"]:
                     gygw = torch.autograd.grad(task_losses[i], param, retain_graph=True)
             # normalize
-            flat_grads.append( gygw[0].flatten() / torch.linalg.norm(gygw[0].flatten()))
+            flat_grads.append(gygw[0].flatten() / torch.linalg.norm(gygw[0].flatten()))
         optimizer.zero_grad()
         # compute the cos similarity between tasks for the gradients on the shared parameters
         running_sum = torch.tensor(0.0).cuda()
         for i, i_grad in enumerate(flat_grads):
-            for j, j_grad in enumerate(flat_grads): 
+            for j, j_grad in enumerate(flat_grads):
                 if i != j:
                     cos_sim_2 = torch.dot(i_grad, j_grad) ** 2
                     running_sum += cos_sim_2
-                    self.running_grad_sim_dict[i][j]["running_sum"].append(np.asarray(cos_sim_2.detach().cpu()))
+                    self.running_grad_sim_dict[i][j]["running_sum"].append(
+                        np.asarray(cos_sim_2.detach().cpu())
+                    )
 
         # penalize it as a losss
-        total_loss = weighted_loss + self.cos_penalty / (self.dataset_config.n_tasks*(self.dataset_config.n_tasks-1)) * running_sum
+        total_loss = (
+            weighted_loss
+            + self.cos_penalty
+            / (self.dataset_config.n_tasks * (self.dataset_config.n_tasks - 1))
+            * running_sum
+        )
         total_loss.backward()
 
         optimizer.step()
-
 
     def run(self):
         """Run GradOrtho with Linear Scalarization."""
         print(f"**** Now running {self.name} on {self.dataset} ... ")
         start_time = time()
         results = dict()
-        preferences = rand_unit_vectors(self.dataset_config.n_tasks, self.flags.n_preferences, True)
+        preferences = rand_unit_vectors(
+            self.dataset_config.n_tasks, self.flags.n_preferences, True
+        )
 
         for i, preference in enumerate(preferences):
             self.preference = preference
+            self.suffix = f"p{i}"
             s_t = time()
             self.cos_penalty = 10
             model = self.configure_model()
-            optimizer = torch.optim.SGD(model.parameters(), lr=self.flags.lr, momentum=self.flags.momentum)
+            optimizer = torch.optim.SGD(
+                model.parameters(), lr=self.flags.lr, momentum=self.flags.momentum
+            )
 
             #  initial exponential moving average grad sim pairs
             optimizer.zero_grad()
@@ -111,13 +120,21 @@ class GradOrtho(Solver):
                     if j not in grad_sim_dict[m].keys():
                         grad_sim_dict[m][j] = dict()
                         grad_sim_dict[m][j]["running_sum"] = list()
-            
+
             self.running_grad_sim_dict = grad_sim_dict
             print(self.running_grad_sim_dict)
             result, checkpoint = self.train(model, optimizer)
             results[i] = dict(r=preference, res=result, checkpoint=checkpoint)
-            self.dump(results, self.prefix + f"_{self.flags.n_preferences}_{self.cos_penalty}_from_0-{i}.pkl")
-            self.dump(self.running_grad_sim_dict, self.prefix + f"_{self.flags.n_preferences}_gradsim_{self.cos_penalty}_dict_from_0-{i}.pkl")
+            self.dump(
+                results,
+                self.prefix
+                + f"_{self.flags.n_preferences}_{self.cos_penalty}_from_0-{i}.pkl",
+            )
+            self.dump(
+                self.running_grad_sim_dict,
+                self.prefix
+                + f"_{self.flags.n_preferences}_gradsim_{self.cos_penalty}_dict_from_0-{i}.pkl",
+            )
 
         total_time = timedelta(seconds=round(time() - start_time))
         print(f"**** Time taken for {self.name} on {self.dataset} = {total_time}s.")

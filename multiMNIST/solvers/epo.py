@@ -83,6 +83,7 @@ class EPO(Solver):
         results = dict()
         preferences = rand_unit_vectors(self.dataset_config.n_tasks, self.flags.n_preferences, True)
         for i, preference in enumerate(preferences):
+            self.suffix = f"p{i}"
             model = self.configure_model()
             optimizer = torch.optim.SGD(model.parameters(), lr=self.flags.lr, momentum=self.flags.momentum)
 

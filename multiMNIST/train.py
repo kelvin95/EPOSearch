@@ -59,8 +59,7 @@ def main(argv):
     start = time()
     for dataset in FLAGS.dset[:]:
         solver = SOLVER_FACTORY[FLAGS.solver](dataset, FLAGS)
-        # solver.run()
-        solver.wrapped_run()
+        solver.run()
     total = round(time() - start)
     print(f"**** Datasets: {FLAGS.dset}, Solver: {FLAGS.solver}")
     print(f"**** Total time: {timedelta(seconds=total)}")

@@ -1,16 +1,15 @@
 import torch
-from torch import optim
-from torch.autograd import grad
 import torch.nn as nn
 from torch.utils.tensorboard import SummaryWriter
 from torch.optim import Optimizer
 import numpy as np
+import os
 import copy
 import pickle
 from datetime import datetime
 from socket import gethostname
 from itertools import combinations
-from typing import List, Tuple, Dict, Any, Union, overload
+from typing import List, Tuple, Dict, Any, Union
 from pathlib import Path
 
 from .models import MTLModel, MTLModelWithCELoss, MTLLeNet, MTLResNet18
@@ -32,7 +31,6 @@ class Solver(object):
         self.train_loader, self.test_loader = load_dataset(
             self.dataset_config, self.flags.batch_size, self.flags.n_workers
         )
-        self.configure_writer()
 
     def set_random_seed(self):
         torch.manual_seed(self.flags.seed)
@@ -53,16 +51,38 @@ class Solver(object):
             return torch.device("cuda")
         return torch.device("cpu")
 
-    def configure_writer(self) -> None:
+    def configure_writer(self) -> Tuple[Path, SummaryWriter]:
         """Configure tensorboard summary writer"""
-        current_time = datetime.now().strftime("%b%d_%H:%M:%S")
-        hostname = gethostname()
-        basename = "-".join([current_time, hostname, self.prefix])
-        log_dir = Path(self.flags.outdir, basename)
-        log_dir.mkdir(parents=True, exist_ok=True)
+        suffix = getattr(self, "suffix", "")
+        basename = "-".join([self.prefix, suffix])
+        exp_dir = Path(self.flags.outdir, basename)
+        exp_dir.mkdir(parents=True, exist_ok=True)
+        exp_runs = [f.name for f in exp_dir.iterdir() if f.name.isdigit()]
+        if exp_runs:
+            latest_run = int(sorted(exp_runs, key=lambda x: int(x))[-1])
+            run = latest_run + 1
+        else:
+            run = 1
+        log_dir = exp_dir.joinpath(str(run))
+        log_dir.mkdir(parents=False, exist_ok=False)
         writer = SummaryWriter(log_dir=log_dir, flush_secs=120)
-        self.writer = writer
-        self.logdir = log_dir
+        return log_dir, writer
+
+    def log_misc_info(self):
+        """Log some info about the env"""
+        print(f"Datetime: {datetime.now().strftime('%H:%M:%S on %b %d')}")
+        print(f"Hostname: {gethostname()}")
+        for key in [
+            "SLURM_JOB_ID",
+            "SLURM_ARRAY_JOB_ID",
+            "SLURM_ARRAY_TASK_ID",
+            "SLURM_ARRAY_TASK_COUNT",
+        ]:
+            print(f"{key}: {os.environ.get(key, 'not set')}")
+        print("Parsed flags: ")
+        print(self.flags.flags_into_string())
+        print(f"Dataset: {self.dataset}")
+        print(f"CUDA: {torch.cuda.is_available()}")
 
     def configure_model(
         self, with_ce_loss: bool = True
@@ -138,31 +158,30 @@ class Solver(object):
             - torch.dot(flat_grads, theta_after - theta_before).detach().clone()
         )
         self.writer.add_scalar("multi-task curvature", mtc, global_step)
-        self.log_pairwise_metrics(loss_after, model, optimizer, global_step)
+        self.log_pairwise_metrics(loss_after, model, global_step)
 
     def log_pairwise_metrics(
         self,
         task_losses: torch.Tensor,
         model: nn.Module,
-        optimizer: Optimizer,
         global_step: int = None,
     ) -> None:
         flat_grads = []
         for i in range(self.dataset_config.n_tasks):
-            optimizer.zero_grad()
+            model.zero_grad()
             task_losses[i].backward(retain_graph=True)
             flat_grads.append((i, flatten_grad(model.parameters())["grad"]))
 
         # clear graph
-        optimizer.zero_grad()
+        model.zero_grad()
         del task_losses
 
         for t in combinations(flat_grads, 2):
             (i, grad_i), (j, grad_j) = t
-            main_tag = f"Tasks {i}, {j}"
+            main_tag = f"tasks_{i}_{j}"
             tag_scalar_dict = {
                 "cosine_angle": cosine_angle(grad_i, grad_j),
-                "grad. magnitude sim.": gmsim(grad_i, grad_j),
+                "grad_magnitude_sim": gmsim(grad_i, grad_j),
             }
             if self.flags.debug:
                 print(f"{main_tag} [{global_step}]: {tag_scalar_dict}")
@@ -178,72 +197,80 @@ class Solver(object):
         optimizer: Optimizer,
     ) -> Tuple[Dict[str, List[float]], Dict[str, torch.Tensor]]:
         """Train model"""
-        self.pretrain(model, optimizer)
+        self.logdir, self.writer = self.configure_writer()
+        with overload_print(self.logdir.joinpath("train.log"), "w"):
+            self.log_misc_info()
 
-        train_losses = []
-        train_accuracies = []
+            self.pretrain(model, optimizer)
 
-        for epoch in range(self.flags.epochs):
-            self.epoch_start()
+            train_losses = []
+            train_accuracies = []
 
-            model.train()
-            for index, (images, labels) in enumerate(self.train_loader):
-                global_step = epoch * len(self.train_loader) + index
-                if torch.cuda.is_available():
-                    images = images.cuda(non_blocking=True)
-                    labels = labels.cuda(non_blocking=True)
-                # self.update_fn(images, labels, model, optimizer)
-                self.update_with_metrics(
-                    images, labels, model, optimizer, global_step, True
-                )
+            for epoch in range(self.flags.epochs):
+                self.epoch_start()
 
-                if (
-                    self.flags.log_frequency > 0
-                    and index % self.flags.log_frequency == 0
-                ):
-                    with torch.no_grad():
-                        task_losses = model(images, labels)
-                    print(
-                        f"Train Epoch {epoch + 1}/{self.flags.epochs} "
-                        f"[{index}/{len(self.train_loader)}]: "
-                        f"Losses - {task_losses.cpu().numpy()}"
-                    )
-
-            self.epoch_end()
-
-            # Calculate and record performance
-            if epoch % self.flags.valid_frequency == 0:
-                model.eval()
-
-                valid_loss = []
-                valid_accuracy = 0.0
-                for _, (images, labels) in enumerate(self.test_loader):
+                model.train()
+                for index, (images, labels) in enumerate(self.train_loader):
+                    global_step = epoch * len(self.train_loader) + index
                     if torch.cuda.is_available():
                         images = images.cuda(non_blocking=True)
                         labels = labels.cuda(non_blocking=True)
+                    # self.update_fn(images, labels, model, optimizer)
+                    self.update_with_metrics(
+                        images, labels, model, optimizer, global_step, True
+                    )
 
-                    with torch.no_grad():
-                        loss, logits = model(images, labels, return_logits=True)
+                    if (
+                        self.flags.log_frequency > 0
+                        and index % self.flags.log_frequency == 0
+                    ):
+                        with torch.no_grad():
+                            task_losses = model(images, labels)
+                        print(
+                            f"Train Epoch {epoch + 1}/{self.flags.epochs} "
+                            f"[{index}/{len(self.train_loader)}]: "
+                            f"Losses - {task_losses.cpu().numpy()}"
+                        )
 
-                    if logits.size(1) > 1:
-                        predictions = torch.argmax(logits, dim=1)
-                    else:
-                        predictions = (logits >= 0.0)[:, 0]
+                self.epoch_end()
 
-                    valid_loss.append(loss)
-                    valid_accuracy += torch.sum(predictions.eq(labels), dim=0)
+                # Calculate and record performance
+                if epoch % self.flags.valid_frequency == 0:
+                    model.eval()
 
-                valid_loss = torch.mean(torch.stack(valid_loss), dim=0)
-                train_losses.append(valid_loss.cpu().numpy())
+                    valid_loss = []
+                    valid_accuracy = 0.0
+                    for _, (images, labels) in enumerate(self.test_loader):
+                        if torch.cuda.is_available():
+                            images = images.cuda(non_blocking=True)
+                            labels = labels.cuda(non_blocking=True)
 
-                valid_accuracy = valid_accuracy / len(self.test_loader.dataset)
-                train_accuracies.append(valid_accuracy.cpu().numpy())
+                        with torch.no_grad():
+                            loss, logits = model(images, labels, return_logits=True)
 
-                print(
-                    f"Validation Epoch {epoch + 1}/{self.flags.epochs}: "
-                    f"train_loss = {train_losses[-1]} "
-                    f"train_acc = {train_accuracies[-1]} "
-                )
+                        if logits.size(1) > 1:
+                            predictions = torch.argmax(logits, dim=1)
+                        else:
+                            predictions = (logits >= 0.0)[:, 0]
+
+                        valid_loss.append(loss)
+                        valid_accuracy += torch.sum(predictions.eq(labels), dim=0)
+
+                    valid_loss = torch.mean(torch.stack(valid_loss), dim=0)
+                    train_losses.append(valid_loss.cpu().numpy())
+                    for i, tl in enumerate(train_losses[-1]):
+                        self.writer.add_scalar(f"valid/loss_{i}", tl, epoch)
+
+                    valid_accuracy = valid_accuracy / len(self.test_loader.dataset)
+                    train_accuracies.append(valid_accuracy.cpu().numpy())
+                    for i, ta in enumerate(train_accuracies[-1]):
+                        self.writer.add_scalar(f"valid/acc_{i}", ta, epoch)
+
+                    print(
+                        f"Epoch {epoch + 1}/{self.flags.epochs}: "
+                        f"valid loss = {train_losses[-1]} "
+                        f"valid acc = {train_accuracies[-1]} "
+                    )
 
         result = {
             "training_losses": train_losses,
@@ -268,11 +295,6 @@ class Solver(object):
         fpath = Path(self.logdir, filename)
         with open(fpath, "wb") as f:
             pickle.dump(convert_to_cpu(contents), f)
-
-    def wrapped_run(self):
-        """Execute the run method with some logging wrapper"""
-        with overload_print(self.logdir.joinpath("train.log"), "w"):
-            self.run()
 
     def run(self):
         """Run a complete training phase.

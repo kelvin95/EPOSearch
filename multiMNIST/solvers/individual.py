@@ -28,12 +28,15 @@ class Individual(Solver):
             init_weight[task_id] = 1
 
             self.task_id = task_id
+            self.suffix = f"t{task_id}"
             model = self.configure_model()
-            optimizer = torch.optim.SGD(model.parameters(), lr=self.flags.lr, momentum=self.flags.momentum)
+            optimizer = torch.optim.SGD(
+                model.parameters(), lr=self.flags.lr, momentum=self.flags.momentum
+            )
 
             result, checkpoint = self.train(model, optimizer)
             results[task_id] = dict(r=init_weight, res=result, checkpoint=checkpoint)
+            self.dump(results, self.prefix + ".pkl")
 
-        self.dump(results, self.prefix + ".pkl")
         total_time = timedelta(seconds=round(time() - start_time))
         print(f"**** Time taken for {self.name} on {self.dataset} = {total_time}s.")

@@ -62,6 +62,7 @@ class GradDropRandom(Solver):
         leaks = np.arange(0, 1.1, 1.0 / max(1, self.flags.n_preferences - 1))
         for i, leak in enumerate(leaks):
             self.leak = leak
+            self.suffix = f"p{i}"
             model = self.configure_model()
             optimizer = torch.optim.SGD(
                 model.parameters(), lr=self.flags.lr, momentum=self.flags.momentum

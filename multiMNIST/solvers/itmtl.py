@@ -116,6 +116,7 @@ class ITMTL(Solver):
         start_time = time()
         results = dict()
         for i in range(self.flags.n_preferences):
+            self.suffix = f"p{i}"
             model = self.configure_model()
             result, checkpoint = self.train(model, None)
             results[i] = dict(r=None, res=result, checkpoint=checkpoint)

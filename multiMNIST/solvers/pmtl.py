@@ -189,6 +189,7 @@ class PMTL(Solver):
 
         results = dict()
         for i, preference in enumerate(preferences):
+            self.suffix = f"p{i}"
             self.ref_vec = preferences
             self.pref_idx = i
             model = self.configure_model()

@@ -29,6 +29,7 @@ class LinScalar(Solver):
         preferences = rand_unit_vectors(self.dataset_config.n_tasks, self.flags.n_preferences, True)
         for i, preference in enumerate(preferences):
             self.preference = preference
+            self.suffix = f"p{i}"
             model = self.configure_model()
             optimizer = torch.optim.SGD(model.parameters(), lr=self.flags.lr, momentum=self.flags.momentum)
             result, checkpoint = self.train(model, optimizer)
