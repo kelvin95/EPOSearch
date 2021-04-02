@@ -8,7 +8,7 @@ import numpy as np
 import torch
 
 from .base import Solver
-from .utils import flatten_grad, recover_flattened
+from .utils import flatten_grad, recover_flattened, flatten_param_grad
 
 from time import time
 from datetime import timedelta
@@ -59,6 +59,8 @@ class ITMTL(Solver):
         return "itmtl"
 
     def update_fn(self, X, ts, model, optimizer):
+        # clear the graph
+        model.zero_grad()
         # compute shared gradients
         flat_grads = {}
         shared_params = [v for k, v in model.model.get_shared_parameters().items()]
@@ -68,7 +70,7 @@ class ITMTL(Solver):
             shared_grads = torch.autograd.grad(
                 task_loss[i], shared_params, retain_graph=True
             )
-            flat_grads[i] = flatten_grad(shared_grads)
+            flat_grads[i] = flatten_param_grad(shared_grads)
 
         # update task parameters
         for i in range(self.dataset_config.n_tasks):
@@ -80,6 +82,8 @@ class ITMTL(Solver):
             )
             for index, params in enumerate(task_params):
                 params.data = params.data - self.flags.lr * task_grads[index]
+                # add a gradient for metrics computation
+                params.grad = task_grads[index]
 
         # compute PCGrad
         pcgrads = [flat_grads[i]["grad"] for i in range(len(flat_grads))]
@@ -106,9 +110,8 @@ class ITMTL(Solver):
         shared_params = [v for k, v in model.model.get_shared_parameters().items()]
         for index, params in enumerate(shared_params):
             params.data = params.data - self.flags.lr * gradients[index]
-
-        # clear the graph
-        model.zero_grad()
+            # add a gradient for metrics computation
+            params.grad = gradients[index]
 
     def run(self):
         """Run itmtl-pcgrad"""

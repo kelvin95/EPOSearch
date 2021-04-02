@@ -46,6 +46,24 @@ def flatten_parameters(parameters):
     return torch.cat([torch.flatten(p.data.detach().clone()) for p in parameters])
 
 
+def flatten_param_grad(grads):
+    l = []
+    indices = []
+    shapes = []
+    s = 0
+    for p in grads:
+        if p is None:
+            shapes.append(None)
+            continue
+        shapes.append(p.shape)
+        p = torch.flatten(p)
+        size = p.shape[0]
+        l.append(p)
+        indices.append((s, s + size))
+        s += size
+    flat = torch.cat(l).view(-1)
+    return {"grad": flat, "indices": indices, "shapes": shapes}
+
 # https://discuss.pytorch.org/t/how-to-flatten-and-then-unflatten-all-model-parameters/34730
 def flatten_grad(parameters):
     l = []
