@@ -32,7 +32,7 @@ DATASET_FACTORY = {
     "mnist": DatasetConfig("mnist", "data/multi_mnist.pickle", 2, 10, (1, 36, 36)),
     "fashion": DatasetConfig("fashion", "data/multi_fashion.pickle", 2, 10, (1, 36, 36)),
     "fashion_and_mnist": DatasetConfig("fashion_and_mnist", "data/multi_fashion_and_mnist.pickle", 2, 10, (1, 36, 36)),
-    "celeba": DatasetConfig("celeba", "/scratch/ssd002/home/kelvin/projects/gradmtl/notebooks/datasets", 40, 1, (3, 64, 64)),
+    "celeba": DatasetConfig("celeba", "/scratch/ssd002/home/kelvin/projects/gradmtl/notebooks/datasets", 5, 1, (3, 64, 64)),  # TODO(amanjit): Change path or download from torchvision
     "cifar10": DatasetConfig("cifar10", "/scratch/ssd001/datasets/cifar10/", 10, 1, (3, 32, 32)),
     "cifar100": DatasetConfig("cifar100", "/scratch/ssd001/datasets/cifar100/", 5, 20, (3, 32, 32)),
 }
@@ -140,17 +140,18 @@ def load_dataset(
     elif config.dataset_name == "celeba":
         transform = torchvision.transforms.Compose(
             [
-                torchvision.transforms.CenterCrop(178),
                 torchvision.transforms.Resize(config.input_shape[1:]),
                 torchvision.transforms.ToTensor(),
                 torchvision.transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
             ]
         )
+        # BlackHair, Moustache, Male, MouthSlightlyOpen, Young
+        target_transform = lambda x: x[[8, 22, 20, 39, 21]]
         train_dataset = torchvision.datasets.CelebA(
-            config.dataset_path, target_type="attr", split="train", transform=transform
+            config.dataset_path, target_type="attr", split="train", transform=transform, target_transform=target_transform
         )
         test_dataset = torchvision.datasets.CelebA(
-            config.dataset_path, target_type="attr", split="valid", transform=transform
+            config.dataset_path, target_type="attr", split="valid", transform=transform, target_transform=target_transform
         )
     elif config.dataset_name == "cifar10":
         train_transform = torchvision.transforms.Compose(
