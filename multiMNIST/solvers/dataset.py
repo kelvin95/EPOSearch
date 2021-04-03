@@ -32,7 +32,7 @@ DATASET_FACTORY = {
     "mnist": DatasetConfig("mnist", "data/multi_mnist.pickle", 2, 10, (1, 36, 36)),
     "fashion": DatasetConfig("fashion", "data/multi_fashion.pickle", 2, 10, (1, 36, 36)),
     "fashion_and_mnist": DatasetConfig("fashion_and_mnist", "data/multi_fashion_and_mnist.pickle", 2, 10, (1, 36, 36)),
-    "celeba": DatasetConfig("celeba", "/scratch/ssd002/home/kelvin/projects/gradmtl/notebooks/datasets", 5, 1, (3, 64, 64)),  # TODO(amanjit): Change path or download from torchvision
+    "celeba": DatasetConfig("celeba", "data/celeba", 5, 1, (3, 64, 64)),  # TODO(amanjit): Change path or download from torchvision
     "cifar10": DatasetConfig("cifar10", "/scratch/ssd001/datasets/cifar10/", 10, 1, (3, 32, 32)),
     "cifar100": DatasetConfig("cifar100", "/scratch/ssd001/datasets/cifar100/", 5, 20, (3, 32, 32)),
 }
