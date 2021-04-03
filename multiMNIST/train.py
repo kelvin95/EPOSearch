@@ -50,8 +50,7 @@ def main(argv):
         # unique while preserving order passed in on cmdline
         FLAGS.dset = list(dict.fromkeys(FLAGS.dset))
 
-    if not Path(FLAGS.outdir).exists():
-        Path(FLAGS.outdir).mkdir(parents=True)
+    Path(FLAGS.outdir).mkdir(parents=True, exist_ok=True)
 
     if FLAGS.debug:
         print("non-flag arguments: ", argv)

@@ -42,3 +42,11 @@ python train.py --solver epo
 
 This will create `.pkl` files in the `out` directory (configurable using `--outdir`).
 Then use `display_result.py` to obtain the figures.
+
+
+To run on `celeba`, run the command
+```bash
+python train.py --solver pcgrad --dset celeba --arch resnet18
+```
+
+Note that this will be fairly slow in comparison to `mnist` experiments.
