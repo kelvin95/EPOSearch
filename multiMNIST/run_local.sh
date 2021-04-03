@@ -2,9 +2,9 @@
 
 DSET="${1:-all}"
 SOLV="${2:-itmtl}"
-ARCH="${2:-lenet}"
+ARCH="${3:-lenet}"
 # number of random seeds
-NUM_RUNS="${3:-5}"
+NUM_RUNS="${4:-5}"
 
 for _ in $(seq $NUM_RUNS); do
   poetry run python train.py \
