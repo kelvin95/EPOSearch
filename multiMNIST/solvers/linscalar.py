@@ -41,7 +41,7 @@ class LinScalar(Solver):
         optimizer.zero_grad()
         weighted_loss.backward()
         optimizer.step()
-        optimizer.zero_grad()
+        # optimizer.zero_grad()
 
     def run(self):
         """Run linscalar"""

@@ -42,7 +42,7 @@ class GradAlign(Solver):
         for i, i_grad in enumerate(flat_grads):
             for j, j_grad in enumerate(flat_grads):
                 if i != j:
-                    cos_sim_2 = torch.dot(i_grad, j_grad) ** 2
+                    cos_sim_2 = torch.dot(i_grad, j_grad) #** 2
                     running_sum += cos_sim_2
 
                     self.running_grad_sim_dict[i][j]["running_sum"].append(
@@ -65,13 +65,13 @@ class GradAlign(Solver):
         results = dict()
         preferences = rand_unit_vectors(self.dataset_config.n_tasks, self.flags.n_preferences, True)
         # fix the preferences 
-        fixed_preferences = np.asarray([[np.sqrt(0.2), np.sqrt(0.8)],
-                                        [np.sqrt(0.6), np.sqrt(0.4)],
-                                        [np.sqrt(0.5), np.sqrt(0.5)],
-                                        [np.sqrt(0.4), np.sqrt(0.6)],
-                                        [np.sqrt(0.8), np.sqrt(0.2)]])
-        preferences = fixed_preferences
-        print(preferences)
+        # fixed_preferences = np.asarray([[np.sqrt(0.2), np.sqrt(0.8)],
+        #                                 [np.sqrt(0.6), np.sqrt(0.4)],
+        #                                 [np.sqrt(0.5), np.sqrt(0.5)],
+        #                                 [np.sqrt(0.4), np.sqrt(0.6)],
+        #                                 [np.sqrt(0.8), np.sqrt(0.2)]])
+        # preferences = fixed_preferences
+        # print(preferences)
         for i, preference in enumerate(preferences):
             self.preference = preference
             self.suffix = f"p{i}"
