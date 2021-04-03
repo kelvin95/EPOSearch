@@ -6,10 +6,11 @@ import numpy as np
 import os
 import copy
 import pickle
+import time
 from datetime import datetime
 from socket import gethostname
 from itertools import combinations
-from typing import List, Tuple, Dict, Any, Union
+from typing import List, Tuple, Dict, Any, Union, Optional
 from pathlib import Path
 
 from .models import MTLModel, MTLModelWithCELoss, MTLLeNet, MTLResNet18
@@ -114,7 +115,7 @@ class Solver(object):
         """
         pass
 
-    def epoch_end(self) -> None:
+    def epoch_end(self, epoch: int) -> None:
         """Reset variables/attributes at end of epoch.
         For eg, print some information etc.
         """
@@ -195,6 +196,7 @@ class Solver(object):
         self,
         model: nn.Module,
         optimizer: Optimizer,
+        use_metrics: bool = True,
     ) -> Tuple[Dict[str, List[float]], Dict[str, torch.Tensor]]:
         """Train model"""
         self.logdir, self.writer = self.configure_writer()
@@ -210,6 +212,7 @@ class Solver(object):
                 self.epoch_start()
 
                 model.train()
+                start_time = time.time()
                 for index, (images, labels) in enumerate(self.train_loader):
                     global_step = epoch * len(self.train_loader) + index
                     if torch.cuda.is_available():
@@ -217,7 +220,7 @@ class Solver(object):
                         labels = labels.cuda(non_blocking=True)
                     # self.update_fn(images, labels, model, optimizer)
                     self.update_with_metrics(
-                        images, labels, model, optimizer, global_step, True
+                        images, labels, model, optimizer, global_step, use_metrics
                     )
 
                     if (
@@ -232,7 +235,8 @@ class Solver(object):
                             f"Losses - {task_losses.cpu().numpy()}"
                         )
 
-                self.epoch_end()
+                end_time = time.time()
+                self.epoch_end(epoch)
 
                 # Calculate and record performance
                 if epoch % self.flags.valid_frequency == 0:
@@ -270,6 +274,7 @@ class Solver(object):
                         f"Epoch {epoch + 1}/{self.flags.epochs}: "
                         f"valid loss = {train_losses[-1]} "
                         f"valid acc = {train_accuracies[-1]} "
+                        f"time - {end_time - start_time:.2f} "
                     )
 
         result = {

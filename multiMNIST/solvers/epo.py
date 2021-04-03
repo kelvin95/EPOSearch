@@ -19,7 +19,7 @@ class EPO(Solver):
         self.descent = 0
         self.n_manual_adjusts = 0
 
-    def epoch_end(self) -> None:
+    def epoch_end(self, epoch: int) -> None:
         print(f"\tdescent={self.descent/len(self.train_loader)}")
         if self.n_manual_adjusts > 0:
             print(f"\t # manual tweek={self.n_manual_adjusts}")
