@@ -37,5 +37,5 @@ cd /h/kelvin/projects/EPOSearch2/multiMNIST/
 python train.py \
   --dset="$DSET" --arch="$ARCH" \
   --seed="$RANDOM" --solver="${A[$SLURM_ARRAY_TASK_ID]}" \
-  --outdir="/h/kelvin/projects/EPOSearch2/multiMNIST/runs/meta_mnist" \
+  --outdir="/h/kelvin/projects/EPOSearch2/multiMNIST/runs/meta_mnist_v2" \
   --n_preferences="10"
