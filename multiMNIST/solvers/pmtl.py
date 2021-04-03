@@ -185,7 +185,7 @@ class PMTL(Solver):
         print(f"**** Now running {self.name} on {self.dataset} ... ")
         start_time = time()
         if self.dataset_config.n_tasks == 2:
-            preferences = circle_points(self.dataset_config.n_tasks)
+            preferences = circle_points(self.flags.n_preferences)
         else:
             preferences = rand_unit_vectors(self.dataset_config.n_tasks, self.flags.n_preferences, True)
         preferences = torch.tensor(preferences, device=self.device, dtype=torch.float)

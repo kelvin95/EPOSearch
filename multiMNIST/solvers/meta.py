@@ -72,7 +72,7 @@ class MetaLearner(Solver):
 
         results = dict()
         if self.dataset_config.n_tasks == 2:
-            preferences = circle_points(self.dataset_config.n_tasks)
+            preferences = circle_points(self.flags.n_preferences)
         else:
             preferences = rand_unit_vectors(self.dataset_config.n_tasks, self.flags.n_preferences, True)
 
