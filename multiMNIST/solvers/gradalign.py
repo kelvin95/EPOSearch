@@ -43,7 +43,7 @@ class GradAlign(Solver):
             for j, j_grad in enumerate(flat_grads):
                 if i != j:
                     cos_sim_2 = torch.dot(i_grad, j_grad) #** 2
-                    running_sum += torch.clamp(torch.cos_sim_2, min=0.0)
+                    running_sum += torch.cos_sim_2
 
                     self.running_grad_sim_dict[i][j]["running_sum"].append(
                         np.asarray(cos_sim_2.detach().cpu())
