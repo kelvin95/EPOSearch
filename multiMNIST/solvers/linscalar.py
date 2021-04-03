@@ -2,7 +2,7 @@ import numpy as np
 import torch
 
 from .base import Solver
-from .utils import rand_unit_vectors
+from .utils import rand_unit_vectors, circle_points
 
 from time import time
 from datetime import timedelta
@@ -51,9 +51,11 @@ class LinScalar(Solver):
         print(f"**** Now running {self.name} on {self.dataset} ... ")
         start_time = time()
         results = dict()
-        preferences = rand_unit_vectors(
-            self.dataset_config.n_tasks, self.flags.n_preferences, True
-        )
+        if self.dataset_config.n_tasks == 2:
+            preferences = circle_points(self.dataset_config.n_tasks)
+        else:
+            preferences = rand_unit_vectors(self.dataset_config.n_tasks, self.flags.n_preferences, True)
+
         for i, preference in enumerate(preferences):
             self.preference = preference
             self.suffix = f"p{i}"
@@ -61,27 +63,27 @@ class LinScalar(Solver):
             optimizer = torch.optim.SGD(
                 model.parameters(), lr=self.flags.lr, momentum=self.flags.momentum
             )
-            grad_sim_dict = {}
-            for m in range(self.dataset_config.n_tasks):
-                if m not in grad_sim_dict.keys():
-                    grad_sim_dict[m] = {}
-                for j in range(self.dataset_config.n_tasks):
-                    if j not in grad_sim_dict[m].keys():
-                        grad_sim_dict[m][j] = dict()
-                        grad_sim_dict[m][j]["running_sum"] = list()
+            # grad_sim_dict = {}
+            # for m in range(self.dataset_config.n_tasks):
+            #     if m not in grad_sim_dict.keys():
+            #         grad_sim_dict[m] = {}
+            #     for j in range(self.dataset_config.n_tasks):
+            #         if j not in grad_sim_dict[m].keys():
+            #             grad_sim_dict[m][j] = dict()
+            #             grad_sim_dict[m][j]["running_sum"] = list()
 
-            self.running_grad_sim_dict = grad_sim_dict
+            # self.running_grad_sim_dict = grad_sim_dict
             result, checkpoint = self.train(model, optimizer)
 
             results[i] = dict(r=preference, res=result, checkpoint=checkpoint)
             self.dump(
                 results, self.prefix + f"_{self.flags.n_preferences}_from_0-{i}.pkl"
             )
-            self.dump(
-                self.running_grad_sim_dict,
-                self.prefix
-                + f"_{self.flags.n_preferences}_gradsim_dict_from_0-{i}.pkl",
-            )
+            # self.dump(
+            #     self.running_grad_sim_dict,
+            #     self.prefix
+            #     + f"_{self.flags.n_preferences}_gradsim_dict_from_0-{i}.pkl",
+            # )
 
         total_time = timedelta(seconds=round(time() - start_time))
         print(f"**** Time taken for {self.name} on {self.dataset} = {total_time}s.")

@@ -1,0 +1,41 @@
+#!/bin/bash
+
+#SBATCH --job-name=mtl_nntd                   # Job name
+#SBATCH --mail-type=ALL                       # Mail events (NONE, BEGIN, END, FAIL, ALL)
+#SBATCH --mail-user=kelvinwong@cs.toronto.edu # Where to send mail
+#SBATCH --ntasks=1                            # Run a single task
+#SBATCH --mem=8GB                             # Job Memory
+#SBATCH --cpus-per-task=4                     # Number of CPUs
+#SBATCH --partition=t4v2                      # Which partition
+#SBATCH --gres=gpu:1                          # Number of GPUs.
+#SBATCH --output=/h/kelvin/exps/%J.out        # Standard output and error log
+#SBATCH --array=0-4                           # Array range
+
+echo Running on $(hostname)
+
+(while true; do
+  nvidia-smi
+  sleep 60
+done) &
+
+DSET="${1:-all}"
+ARCH="${2:-lenet}"
+
+# array of methods
+A=(epo
+  individual
+  linscalar
+  meta
+  pmtl)
+
+
+source /h/kelvin/.bashrc
+. /h/kelvin/envs/cuda10.env
+conda activate epo-cuda10
+
+cd /h/kelvin/projects/EPOSearch2/multiMNIST/
+python train.py \
+  --dset="$DSET" --arch="$ARCH" \
+  --seed="$RANDOM" --solver="${A[$SLURM_ARRAY_TASK_ID]}" \
+  --outdir="/h/kelvin/projects/EPOSearch2/multiMNIST/runs/meta_mnist" \
+  --n_preferences="10"

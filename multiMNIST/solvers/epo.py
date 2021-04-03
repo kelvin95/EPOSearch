@@ -4,7 +4,7 @@ from torch.autograd import Variable
 
 from .epo_lp import EPO_LP
 from .base import Solver
-from .utils import rand_unit_vectors, getNumParams
+from .utils import rand_unit_vectors, getNumParams, circle_points
 
 from time import time
 from datetime import timedelta
@@ -81,7 +81,11 @@ class EPO(Solver):
         print(f"# params={n_params}")
 
         results = dict()
-        preferences = rand_unit_vectors(self.dataset_config.n_tasks, self.flags.n_preferences, True)
+        if self.dataset_config.n_tasks == 2:
+            preferences = circle_points(self.dataset_config.n_tasks)
+        else:
+            preferences = rand_unit_vectors(self.dataset_config.n_tasks, self.flags.n_preferences, True)
+
         for i, preference in enumerate(preferences):
             self.suffix = f"p{i}"
             model = self.configure_model()

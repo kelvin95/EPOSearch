@@ -22,7 +22,7 @@ flags.DEFINE_float("meta_lr", 1e-1, "meta learning rate", lower_bound=0.0)
 class MetaLearner(Solver):
     @property
     def name(self):
-        return "meta_learner"
+        return "meta"
 
     def update_fn(
         self,
@@ -79,6 +79,7 @@ class MetaLearner(Solver):
         for i, preference in enumerate(preferences):
             print(f"[{i}/{len(preferences)}]: Running MetaLearner for preference = {preference}.")
 
+            self.suffix = f"p{i}"
             self.preference_weights = torch.from_numpy(preference).to(self.device)
             self.task_weights = torch.full_like(self.preference_weights, 1. / self.dataset_config.n_tasks)
             self.task_weights_history = []  # store task weights
