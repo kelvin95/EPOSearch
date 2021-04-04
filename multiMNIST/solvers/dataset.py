@@ -107,6 +107,15 @@ class MTLCIFAR100(torch.utils.data.Dataset):
 
 
 def get_dataset_config(dataset_name: str) -> DatasetConfig:
+    # HACK: get celeba dataset with variable number of attributes
+    if "celeba-" in dataset_name and dataset_name not in DATASET_FACTORY:
+        celeba_config = DATASET_FACTORY["celeba"]
+        num_attributes = int(dataset_name.split("-")[1])
+        dataset_config = DatasetConfig(
+            dataset_name, celeba_config.dataset_path, num_attributes, 1, celeba_config.input_shape
+        )
+        return dataset_config
+
     if dataset_name not in DATASET_FACTORY:
         raise ValueError(f"Dataset {config.dataset_name} is not supported!")
     return DATASET_FACTORY[dataset_name]
@@ -137,7 +146,7 @@ def load_dataset(
 
         train_dataset = torch.utils.data.TensorDataset(trainX, trainLabel)
         test_dataset = torch.utils.data.TensorDataset(testX, testLabel)
-    elif config.dataset_name == "celeba":
+    elif "celeba" in config.dataset_name:
         transform = torchvision.transforms.Compose(
             [
                 torchvision.transforms.Resize(config.input_shape[1:]),
@@ -145,8 +154,13 @@ def load_dataset(
                 torchvision.transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
             ]
         )
-        # BlackHair, Moustache, Male, MouthSlightlyOpen, Young
-        target_transform = lambda x: x[[8, 22, 20, 39, 21]]
+
+        if config.dataset_name == "celeba":
+            # BlackHair, Moustache, Male, MouthSlightlyOpen, Young
+            target_transform = lambda x: x[[8, 22, 20, 39, 21]]
+        else:
+            target_transform = lambda x: x[:config.n_tasks]
+
         train_dataset = torchvision.datasets.CelebA(
             config.dataset_path, target_type="attr", split="train", transform=transform, target_transform=target_transform
         )

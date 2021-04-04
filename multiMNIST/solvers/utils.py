@@ -120,7 +120,8 @@ def rand_unit_vectors(
     Returns:
         (np.ndarray): [ndims] unit vector.
     """
-    vector = np.random.randn(num_vectors, ndims)
+    r = np.random.RandomState(42)  # HACK: Ensure all methods use the same preference vectors
+    vector = r.randn(num_vectors, ndims)
     vector = vector / np.linalg.norm(vector, axis=-1)[:, None]
     return np.abs(vector) if absolute else vector
 

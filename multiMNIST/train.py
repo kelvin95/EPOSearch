@@ -26,7 +26,7 @@ flags.DEFINE_multi_enum(
     "name of dataset to use",
 )
 flags.DEFINE_string("outdir", "runs", "Output dir to save results")
-flags.DEFINE_enum("arch", "lenet", ["lenet", "resnet18"], "network architecture to use")
+flags.DEFINE_enum("arch", "lenet", ["lenet", "resnet18", "resnet34"], "network architecture to use")
 flags.DEFINE_enum(
     "init",
     "xavier",
