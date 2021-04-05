@@ -89,7 +89,7 @@ class MetaLearner(Solver):
                 model.parameters(), lr=self.flags.lr, momentum=self.flags.momentum
             )
 
-            result, checkpoint = self.train(model, optimizer, use_metrics=True)
+            result, checkpoint = self.train(model, optimizer)
             results[i] = dict(
                 r=preference, res=result, checkpoint=checkpoint, task_weights=np.stack(self.task_weights_history)
             )
@@ -97,3 +97,17 @@ class MetaLearner(Solver):
 
         total_time = datetime.timedelta(seconds=round(time.time() - start_time))
         print(f"**** Time taken for {self.name} on {self.dataset} = {total_time}s.")
+
+    def run_timing(self, num_timing_steps: int = 100) -> float:
+        """Time the training phase."""
+        preference = rand_unit_vectors(self.dataset_config.n_tasks, 1)[0]
+        self.preference_weights = torch.from_numpy(preference).to(self.device)
+        self.task_weights = torch.full_like(self.preference_weights, 1. / self.dataset_config.n_tasks)
+
+        model = self.configure_model()
+        optimizer = torch.optim.SGD(
+            model.parameters(), lr=self.flags.lr, momentum=self.flags.momentum
+        )
+
+        seconds_per_training_step = self.time_training_step(model, optimizer, num_timing_steps)
+        return seconds_per_training_step
