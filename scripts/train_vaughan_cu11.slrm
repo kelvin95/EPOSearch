@@ -1,0 +1,49 @@
+#!/bin/bash
+
+#SBATCH --job-name=mtl_nntd                  # Job name
+#SBATCH --mail-type=ALL                      # Mail events (NONE, BEGIN, END, FAIL, ALL)
+#SBATCH --mail-user=amanjitsk@cs.toronto.edu # Where to send mail
+#SBATCH --ntasks=1                           # Run a single task
+#SBATCH --mem=8GB                            # Job Memory
+#SBATCH --cpus-per-task=8                    # Number of CPUs
+#SBATCH --partition=t4v1,p100,t4v2,rtx6000   # Which partition
+#SBATCH --gres=gpu:1                         # Number of GPUs.
+#SBATCH --output=vlogs/job_%A-%a.log         # Standard output and error log
+#SBATCH --array=0-13                         # Array range
+#SBATCH --exclude=gpu006,gpu021,gpu037,gpu039,gpu040,gpu041,gpu042,gpu043,gpu044,gpu045,gpu046,gpu047,gpu048,gpu049,gpu050,gpu051,gpu052,gpu054,gpu055,gpu056,gpu057,gpu058,gpu060,gpu061,gpu063,gpu064,gpu065,gpu066,gpu068,gpu069,gpu075,gpu076,gpu078,gpu081,gpu082,gpu084,gpu085,gpu087,gpu088,gpu089,gpu090,gpu091,gpu095,gpu097,gpu098,gpu100,gpu105,gpu108,gpu113,gpu114,gpu115,gpu116,gpu117,gpu118,gpu120
+
+echo Running on $(hostname)
+
+(while true; do
+  nvidia-smi
+  sleep 120
+done) &
+
+DSET="${1:-celeba}"
+ARCH="${2:-lenet}"
+# number of random seeds
+NUM_RUNS="${3:-1}"
+
+# array of methods
+A=(epo
+  graddrop
+  graddrop_random
+  graddrop_deterministic
+  gradnorm
+  gradvacc
+  gradortho
+  gradalign
+  individual
+  itmtl
+  linscalar
+  mgda
+  pcgrad
+  pmtl)
+
+cd /h/amanjitsk/projects/EPOSearch/multiMNIST
+for _ in $(seq $NUM_RUNS); do
+  poetry run python train.py \
+    --dset="$DSET" --arch="$ARCH" \
+    --seed="$RANDOM" --solver="${A[$SLURM_ARRAY_TASK_ID]}" \
+    --outdir=/checkpoint/amanjitsk/runs
+done
