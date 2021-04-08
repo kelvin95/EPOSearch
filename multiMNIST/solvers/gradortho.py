@@ -100,17 +100,17 @@ class GradOrtho(Solver):
         results = dict()
         preferences = rand_unit_vectors(self.dataset_config.n_tasks, self.flags.n_preferences, True)
         # fix the preferences 
-        fixed_preferences = np.asarray([[np.sqrt(0.2), np.sqrt(0.8)],
-                                        [np.sqrt(0.6), np.sqrt(0.4)],
-                                        [np.sqrt(0.5), np.sqrt(0.5)],
-                                        [np.sqrt(0.4), np.sqrt(0.6)],
-                                        [np.sqrt(0.8), np.sqrt(0.2)]])
-        preferences = fixed_preferences
+        # fixed_preferences = np.asarray([[np.sqrt(0.2), np.sqrt(0.8)],
+        #                                 [np.sqrt(0.6), np.sqrt(0.4)],
+        #                                 [np.sqrt(0.5), np.sqrt(0.5)],
+        #                                 [np.sqrt(0.4), np.sqrt(0.6)],
+        #                                 [np.sqrt(0.8), np.sqrt(0.2)]])
+        # preferences = fixed_preferences
         for i, preference in enumerate(preferences):
             self.preference = preference
             self.suffix = f"p{i}"
             s_t = time()
-            self.cos_penalty = 1
+            self.cos_penalty = 1e-1
             model = self.configure_model()
             optimizer = torch.optim.SGD(
                 model.parameters(), lr=self.flags.lr, momentum=self.flags.momentum

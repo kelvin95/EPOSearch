@@ -1,7 +1,7 @@
 import numpy as np
 
 from problems.toy_biobjective import circle_points, concave_fun_eval, create_pf
-from solvers import epo_search, pareto_mtl_search, linscalar, moo_mtl_search
+from solvers import epo_search, pareto_mtl_search, linscalar, moo_mtl_search, meta_search
 
 import matplotlib.pyplot as plt
 from latex_utils import latexify
@@ -14,7 +14,7 @@ if __name__ == '__main__':
 
     pmtl_K = 5
     pmtl_refs = circle_points(pmtl_K, 0, np.pi / 2)
-    methods = ['EPO', 'PMTL', 'MOOMTL', 'LinScalar']
+    methods = ['EPO', 'PMTL', 'MOOMTL', 'LinScalar', "Meta"]
     latexify(fig_width=2., fig_height=1.55)
     ss, mi = 0.1, 100
     pf = create_pf()
@@ -52,6 +52,8 @@ if __name__ == '__main__':
             if method == 'MOOMTL':
                 _, res = moo_mtl_search(concave_fun_eval, x=x0,
                                         step_size=0.2, max_iters=150)
+            if method == "Meta":
+                _, res = meta_search(concave_fun_eval, r=r, x=x0, step_size=1e-1, max_iters=100)
             last_ls.append(res['ls'][-1])
         last_ls = np.stack(last_ls)
         ax.scatter(last_ls[:, 0], last_ls[:, 1], s=40, c='b', alpha=1)

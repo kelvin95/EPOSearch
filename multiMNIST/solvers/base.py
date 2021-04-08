@@ -6,13 +6,14 @@ import numpy as np
 import os
 import copy
 import pickle
+import time
 from datetime import datetime
 from socket import gethostname
 from itertools import combinations
-from typing import List, Tuple, Dict, Any, Union
+from typing import List, Tuple, Dict, Any, Union, Optional
 from pathlib import Path
 
-from .models import MTLModel, MTLModelWithCELoss, MTLLeNet, MTLResNet18
+from .models import MTLModel, MTLModelWithCELoss, MTLLeNet, MTLResNet18, MTLResNet34
 from .dataset import get_dataset_config, load_dataset
 from .utils import cosine_angle, flatten_parameters, flatten_grad, gmsim, overload_print
 
@@ -94,6 +95,12 @@ class Solver(object):
                 self.dataset_config.n_classes_per_task,
                 self.dataset_config.input_shape,
             )
+        elif self.flags.arch == "resnet34":
+            model = MTLResNet34(
+                self.dataset_config.n_tasks,
+                self.dataset_config.n_classes_per_task,
+                self.dataset_config.input_shape,
+            )
         elif self.flags.arch == "lenet":
             model = MTLLeNet(
                 self.dataset_config.n_tasks,
@@ -114,7 +121,7 @@ class Solver(object):
         """
         pass
 
-    def epoch_end(self) -> None:
+    def epoch_end(self, epoch: int) -> None:
         """Reset variables/attributes at end of epoch.
         For eg, print some information etc.
         """
@@ -195,6 +202,7 @@ class Solver(object):
         self,
         model: nn.Module,
         optimizer: Optimizer,
+        use_metrics: bool = True,
     ) -> Tuple[Dict[str, List[float]], Dict[str, torch.Tensor]]:
         """Train model"""
         self.logdir, self.writer = self.configure_writer()
@@ -210,6 +218,7 @@ class Solver(object):
                 self.epoch_start()
 
                 model.train()
+                start_time = time.time()
                 for index, (images, labels) in enumerate(self.train_loader):
                     global_step = epoch * len(self.train_loader) + index
                     if torch.cuda.is_available():
@@ -217,7 +226,7 @@ class Solver(object):
                         labels = labels.cuda(non_blocking=True)
                     # self.update_fn(images, labels, model, optimizer)
                     self.update_with_metrics(
-                        images, labels, model, optimizer, global_step, True
+                        images, labels, model, optimizer, global_step, use_metrics
                     )
 
                     if (
@@ -232,7 +241,8 @@ class Solver(object):
                             f"Losses - {task_losses.cpu().numpy()}"
                         )
 
-                self.epoch_end()
+                end_time = time.time()
+                self.epoch_end(epoch)
 
                 # Calculate and record performance
                 if epoch % self.flags.valid_frequency == 0:
@@ -270,6 +280,7 @@ class Solver(object):
                         f"Epoch {epoch + 1}/{self.flags.epochs}: "
                         f"valid loss = {train_losses[-1]} "
                         f"valid acc = {train_accuracies[-1]} "
+                        f"time - {end_time - start_time:.2f} "
                     )
 
         result = {
@@ -313,3 +324,32 @@ class Solver(object):
         # ---------***---------
 
         self.train(model, optimizer)
+
+    def time_training_step(self, model, optimizer, num_timing_steps, num_warmup_steps=10) -> float:
+        """Time the training phase."""
+        self.pretrain(model, optimizer)
+        self.epoch_start()
+
+        model.train()
+        total_seconds = 0.
+        num_training_steps = 0
+
+        for index, (images, labels) in enumerate(self.train_loader):
+            if index >= num_timing_steps + num_warmup_steps:
+                break
+
+            images = images.to(self.device)
+            labels = labels.to(self.device)
+
+            start_time = time.time()
+            self.update_fn(images, labels, model, optimizer)
+            if index >= num_warmup_steps:
+                total_seconds += time.time() - start_time
+                num_training_steps += 1
+                print(
+                    f"Timing {index - num_warmup_steps}/{min(num_timing_steps, len(self.train_loader))}: "
+                    f"Average time - {total_seconds / num_training_steps * 1e9:.2f} "
+                )
+
+        seconds_per_training_step = total_seconds / num_training_steps
+        return seconds_per_training_step

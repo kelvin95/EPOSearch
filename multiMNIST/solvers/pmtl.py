@@ -10,7 +10,7 @@ from torch.autograd import Variable
 
 from .base import Solver
 from .min_norm_solvers import MinNormSolver
-from .utils import rand_unit_vectors
+from .utils import rand_unit_vectors, circle_points
 
 from time import time
 from datetime import timedelta
@@ -184,11 +184,16 @@ class PMTL(Solver):
         """Run Pareto MTL"""
         print(f"**** Now running {self.name} on {self.dataset} ... ")
         start_time = time()
-        preferences = rand_unit_vectors(self.dataset_config.n_tasks, self.flags.n_preferences, True)
+        if self.dataset_config.n_tasks == 2:
+            preferences = circle_points(self.flags.n_preferences)
+        else:
+            preferences = rand_unit_vectors(self.dataset_config.n_tasks, self.flags.n_preferences, True)
         preferences = torch.tensor(preferences, device=self.device, dtype=torch.float)
 
         results = dict()
         for i, preference in enumerate(preferences):
+            print("preference", preference)
+
             self.suffix = f"p{i}"
             self.ref_vec = preferences
             self.pref_idx = i
@@ -201,3 +206,17 @@ class PMTL(Solver):
 
         total_time = timedelta(seconds=round(time() - start_time))
         print(f"**** Time taken for {self.name} on {self.dataset} = {total_time}s.")
+
+    def run_timing(self, num_timing_steps: int = 100) -> float:
+        """Time the training phase."""
+        preference = rand_unit_vectors(self.dataset_config.n_tasks, 1)
+        self.ref_vec = torch.tensor(preference, device=self.device, dtype=torch.float)
+        self.pref_idx = 0
+
+        model = self.configure_model()
+        optimizer = torch.optim.SGD(
+            model.parameters(), lr=self.flags.lr, momentum=self.flags.momentum
+        )
+
+        seconds_per_training_step = self.time_training_step(model, optimizer, num_timing_steps)
+        return seconds_per_training_step

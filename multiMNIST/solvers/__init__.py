@@ -9,6 +9,7 @@ from .gradalign import GradAlign
 from .individual import Individual
 from .itmtl import ITMTL
 from .linscalar import LinScalar
+from .meta import MetaLearner
 from .mgda import MGDA
 from .pcgrad import PCGrad
 from .pmtl import PMTL
@@ -25,6 +26,7 @@ SOLVER_FACTORY = {
     "individual": Individual,
     "itmtl": ITMTL,
     "linscalar": LinScalar,
+    "meta": MetaLearner,
     "mgda": MGDA,
     "pcgrad": PCGrad,
     "pmtl": PMTL,

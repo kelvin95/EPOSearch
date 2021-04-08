@@ -4,7 +4,7 @@ from torch.autograd import Variable
 
 from .epo_lp import EPO_LP
 from .base import Solver
-from .utils import rand_unit_vectors, getNumParams
+from .utils import rand_unit_vectors, getNumParams, circle_points
 
 from time import time
 from datetime import timedelta
@@ -19,7 +19,7 @@ class EPO(Solver):
         self.descent = 0
         self.n_manual_adjusts = 0
 
-    def epoch_end(self) -> None:
+    def epoch_end(self, epoch: int) -> None:
         print(f"\tdescent={self.descent/len(self.train_loader)}")
         if self.n_manual_adjusts > 0:
             print(f"\t # manual tweek={self.n_manual_adjusts}")
@@ -81,8 +81,14 @@ class EPO(Solver):
         print(f"# params={n_params}")
 
         results = dict()
-        preferences = rand_unit_vectors(self.dataset_config.n_tasks, self.flags.n_preferences, True)
+        if self.dataset_config.n_tasks == 2:
+            preferences = circle_points(self.flags.n_preferences)
+        else:
+            preferences = rand_unit_vectors(self.dataset_config.n_tasks, self.flags.n_preferences, True)
+
         for i, preference in enumerate(preferences):
+            print("preference", preference)
+
             self.suffix = f"p{i}"
             model = self.configure_model()
             optimizer = torch.optim.SGD(model.parameters(), lr=self.flags.lr, momentum=self.flags.momentum)
@@ -98,3 +104,17 @@ class EPO(Solver):
 
         total_time = timedelta(seconds=round(time() - start_time))
         print(f"**** Time taken for {self.name} on {self.dataset} = {total_time}s.")
+
+    def run_timing(self, num_timing_steps: int = 100) -> float:
+        """Time the training phase."""
+        model = self.configure_model()
+        optimizer = torch.optim.SGD(
+            model.parameters(), lr=self.flags.lr, momentum=self.flags.momentum
+        )
+
+        _, n_params = getNumParams(model.parameters())
+        self.preference = rand_unit_vectors(self.dataset_config.n_tasks, 1)[0]
+        self.epo_lp = EPO_LP(m=self.dataset_config.n_tasks, n=n_params, r=self.preference)
+
+        seconds_per_training_step = self.time_training_step(model, optimizer, num_timing_steps)
+        return seconds_per_training_step

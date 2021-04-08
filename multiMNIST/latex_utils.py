@@ -44,9 +44,9 @@ def latexify(fig_width=None, fig_height=None, columns=1):
                                       r'\usepackage{amsfonts}',
                                       r'\usepackage{newtxmath}'],
               'axes.labelsize': 8,  # fontsize for x and y labels (was 10)
-              'axes.titlesize': 9,
-              'font.size': 10,   # was 10
-              'legend.fontsize': 9,     # was 10
+              'axes.titlesize': 8,
+              'font.size': 8,   # was 10
+              'legend.fontsize': 8,     # was 10
               'legend.shadow': False,
               'legend.fancybox': True,
               'xtick.labelsize': 6,

@@ -3,7 +3,7 @@ from typing import Dict, Optional, Tuple
 import torch
 import torchvision
 
-__all__ = ["MTLModel", "MTLModelWithCELoss", "MTLLeNet", "MTLResNet18"]
+__all__ = ["MTLModel", "MTLModelWithCELoss", "MTLLeNet", "MTLResNet18", "MTLResNet34"]
 
 
 class MTLModel(torch.nn.Module):
@@ -201,3 +201,34 @@ class MTLResNet18(MTLModel):
 
     def get_task_parameters(self, task_id: int) -> Dict[str, torch.nn.Parameter]:
         return {k: v for k, v in self.predictor.named_parameters()}
+
+
+class MTLResNet34(MTLResNet18):
+    """MTL ResNet34 model.
+
+    Args:
+        n_tasks (int): Number of tasks.
+        n_classes_per_task (int): Number of classes per task.
+        input_shape (Tuple[int, int, int]): Shape of each input image.
+    """
+
+    def __init__(self, n_tasks: int, n_classes_per_task: int, input_shape: Tuple[int, int, int]) -> None:
+        super(MTLResNet34, self).__init__(n_tasks, n_classes_per_task, input_shape)
+        self.net = torchvision.models.resnet34()
+
+        # replace number of input channels
+        self.net.conv1 = torch.nn.Conv2d(
+            self.input_channels,
+            self.net.conv1.out_channels,
+            kernel_size=self.net.conv1.kernel_size,
+            stride=self.net.conv1.stride,
+            padding=self.net.conv1.padding,
+            bias=self.net.conv1.bias,
+        )
+
+        # skip final FC layer
+        num_hidden_channels = self.net.fc.in_features
+        self.net.fc = torch.nn.Sequential()
+
+        # output predictor
+        self.predictor = torch.nn.Linear(num_hidden_channels, self.n_tasks * self.n_classes_per_task)
