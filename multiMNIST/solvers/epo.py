@@ -87,6 +87,8 @@ class EPO(Solver):
             preferences = rand_unit_vectors(self.dataset_config.n_tasks, self.flags.n_preferences, True)
 
         for i, preference in enumerate(preferences):
+            print("preference", preference)
+
             self.suffix = f"p{i}"
             model = self.configure_model()
             optimizer = torch.optim.SGD(model.parameters(), lr=self.flags.lr, momentum=self.flags.momentum)
@@ -102,3 +104,17 @@ class EPO(Solver):
 
         total_time = timedelta(seconds=round(time() - start_time))
         print(f"**** Time taken for {self.name} on {self.dataset} = {total_time}s.")
+
+    def run_timing(self, num_timing_steps: int = 100) -> float:
+        """Time the training phase."""
+        model = self.configure_model()
+        optimizer = torch.optim.SGD(
+            model.parameters(), lr=self.flags.lr, momentum=self.flags.momentum
+        )
+
+        _, n_params = getNumParams(model.parameters())
+        self.preference = rand_unit_vectors(self.dataset_config.n_tasks, 1)[0]
+        self.epo_lp = EPO_LP(m=self.dataset_config.n_tasks, n=n_params, r=self.preference)
+
+        seconds_per_training_step = self.time_training_step(model, optimizer, num_timing_steps)
+        return seconds_per_training_step

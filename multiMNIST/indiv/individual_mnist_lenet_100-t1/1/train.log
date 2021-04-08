@@ -1,0 +1,144 @@
+Datetime: 03:05:41 on Apr 02
+Hostname: guppy4
+SLURM_JOB_ID: 1216916
+SLURM_ARRAY_JOB_ID: 1216907
+SLURM_ARRAY_TASK_ID: 8
+SLURM_ARRAY_TASK_COUNT: 14
+Parsed flags: 
+--nohelp
+--nohelpfull
+--nohelpshort
+--nohelpxml
+--noonly_check_args
+--nopdb
+--nopdb_post_mortem
+--norun_with_pdb
+--norun_with_profiling
+--use_cprofile_for_profiling
+--noalsologtostderr
+--log_dir=
+--logger_levels=
+--nologtostderr
+--showprefixforinfo
+--stderrthreshold=fatal
+--verbosity=0
+--arch=lenet
+--batch_size=256
+--nodebug
+--dset=mnist
+--dset=fashion
+--dset=fashion_and_mnist
+--epochs=100
+--init=xavier
+--log_frequency=0
+--lr=0.001
+--momentum=0.0
+--n_preferences=5
+--n_workers=4
+--outdir=runs
+--seed=3070
+--solver=individual
+--valid_frequency=1
+
+Dataset: mnist
+CUDA: True
+Epoch 1/100: valid loss = [6.9359365 1.2495703] valid acc = [0.0805  0.58435] 
+Epoch 2/100: valid loss = [8.433337   0.90564317] valid acc = [0.08284999 0.6992    ] 
+Epoch 3/100: valid loss = [9.14153    0.83262986] valid acc = [0.08635 0.7269 ] 
+Epoch 4/100: valid loss = [9.05233   0.6993607] valid acc = [0.08615    0.76699996] 
+Epoch 5/100: valid loss = [9.507588 0.648014] valid acc = [0.08445 0.78515] 
+Epoch 6/100: valid loss = [9.479968  0.6049893] valid acc = [0.0866     0.79824996] 
+Epoch 7/100: valid loss = [9.5502825  0.58677304] valid acc = [0.0873 0.8045] 
+Epoch 8/100: valid loss = [9.633193  0.5553595] valid acc = [0.0861     0.81659997] 
+Epoch 9/100: valid loss = [9.919632   0.54232055] valid acc = [0.08765 0.82045] 
+Epoch 10/100: valid loss = [10.21993     0.52621925] valid acc = [0.0887 0.8244] 
+Epoch 11/100: valid loss = [10.058119    0.51116306] valid acc = [0.08785 0.83175] 
+Epoch 12/100: valid loss = [10.048184   0.4932092] valid acc = [0.08755 0.8361 ] 
+Epoch 13/100: valid loss = [10.375862    0.48627153] valid acc = [0.08795    0.83779997] 
+Epoch 14/100: valid loss = [9.921432   0.47995055] valid acc = [0.08775 0.84085] 
+Epoch 15/100: valid loss = [10.012389   0.4637826] valid acc = [0.0875     0.84564996] 
+Epoch 16/100: valid loss = [10.319073    0.46742925] valid acc = [0.08814999 0.84375   ] 
+Epoch 17/100: valid loss = [10.199792    0.45965475] valid acc = [0.0876  0.84865] 
+Epoch 18/100: valid loss = [10.279579   0.4595746] valid acc = [0.08865 0.8473 ] 
+Epoch 19/100: valid loss = [10.264282    0.44045326] valid acc = [0.08755 0.854  ] 
+Epoch 20/100: valid loss = [10.076251    0.44898728] valid acc = [0.0848 0.8517] 
+Epoch 21/100: valid loss = [10.351443    0.42973098] valid acc = [0.08615 0.85795] 
+Epoch 22/100: valid loss = [10.523219    0.43040043] valid acc = [0.08679999 0.8563    ] 
+Epoch 23/100: valid loss = [10.779725    0.42041442] valid acc = [0.08769999 0.86044997] 
+Epoch 24/100: valid loss = [10.524601    0.43565813] valid acc = [0.08835 0.85635] 
+Epoch 25/100: valid loss = [10.488706    0.40964872] valid acc = [0.0874     0.86439997] 
+Epoch 26/100: valid loss = [10.763121    0.41718927] valid acc = [0.08665 0.8617 ] 
+Epoch 27/100: valid loss = [10.419024    0.40446687] valid acc = [0.0859  0.86485] 
+Epoch 28/100: valid loss = [10.518558    0.40487802] valid acc = [0.08745 0.86455] 
+Epoch 29/100: valid loss = [10.411693   0.3964732] valid acc = [0.08594999 0.86695   ] 
+Epoch 30/100: valid loss = [10.627752    0.39776576] valid acc = [0.0867  0.86785] 
+Epoch 31/100: valid loss = [10.64775    0.3979229] valid acc = [0.0867     0.86614996] 
+Epoch 32/100: valid loss = [10.568354  0.400615] valid acc = [0.0854  0.86455] 
+Epoch 33/100: valid loss = [10.943337    0.38958192] valid acc = [0.0887 0.8713] 
+Epoch 34/100: valid loss = [10.902281    0.39233574] valid acc = [0.0867     0.86864996] 
+Epoch 35/100: valid loss = [11.04556    0.3821016] valid acc = [0.08665 0.87235] 
+Epoch 36/100: valid loss = [10.773289   0.3966109] valid acc = [0.08705 0.86875] 
+Epoch 37/100: valid loss = [10.952901    0.38527653] valid acc = [0.08814999 0.87175   ] 
+Epoch 38/100: valid loss = [11.058535    0.38974673] valid acc = [0.0889 0.8698] 
+Epoch 39/100: valid loss = [11.040865    0.37646466] valid acc = [0.08755 0.87385] 
+Epoch 40/100: valid loss = [11.1167145   0.36716783] valid acc = [0.0885  0.87595] 
+Epoch 41/100: valid loss = [11.114907    0.36835852] valid acc = [0.08935    0.87579995] 
+Epoch 42/100: valid loss = [11.002648    0.36695588] valid acc = [0.08715 0.87745] 
+Epoch 43/100: valid loss = [11.071537    0.36296043] valid acc = [0.0885     0.87939996] 
+Epoch 44/100: valid loss = [10.905545    0.36075428] valid acc = [0.0874 0.8785] 
+Epoch 45/100: valid loss = [11.456922   0.3806097] valid acc = [0.08785 0.8728 ] 
+Epoch 46/100: valid loss = [11.062242   0.3606206] valid acc = [0.088   0.87985] 
+Epoch 47/100: valid loss = [11.155046    0.36474305] valid acc = [0.08795 0.8761 ] 
+Epoch 48/100: valid loss = [11.047672    0.35894862] valid acc = [0.0887  0.87955] 
+Epoch 49/100: valid loss = [11.631768    0.37005052] valid acc = [0.08755    0.87684995] 
+Epoch 50/100: valid loss = [11.369701    0.36150894] valid acc = [0.08975 0.8797 ] 
+Epoch 51/100: valid loss = [11.215218    0.34978858] valid acc = [0.08814999 0.88245   ] 
+Epoch 52/100: valid loss = [11.064978    0.35069758] valid acc = [0.0894     0.88369995] 
+Epoch 53/100: valid loss = [11.013851    0.35029367] valid acc = [0.08975    0.88189995] 
+Epoch 54/100: valid loss = [11.524751   0.3546408] valid acc = [0.08765 0.88065] 
+Epoch 55/100: valid loss = [11.739506    0.36334032] valid acc = [0.0884 0.8777] 
+Epoch 56/100: valid loss = [11.498913   0.3509726] valid acc = [0.08875 0.88255] 
+Epoch 57/100: valid loss = [11.375346    0.35605347] valid acc = [0.08859999 0.88025   ] 
+Epoch 58/100: valid loss = [11.444128   0.3401585] valid acc = [0.08855 0.88785] 
+Epoch 59/100: valid loss = [11.264904  0.339581] valid acc = [0.08859999 0.8868    ] 
+Epoch 60/100: valid loss = [11.631807    0.34393227] valid acc = [0.08904999 0.88385   ] 
+Epoch 61/100: valid loss = [11.161025   0.3560106] valid acc = [0.08925    0.87974995] 
+Epoch 62/100: valid loss = [11.4793215   0.35940257] valid acc = [0.08975 0.87815] 
+Epoch 63/100: valid loss = [11.634678    0.35624453] valid acc = [0.08899999 0.88154995] 
+Epoch 64/100: valid loss = [11.172499    0.34755808] valid acc = [0.09005    0.88374996] 
+Epoch 65/100: valid loss = [11.487504   0.3369388] valid acc = [0.08955 0.88755] 
+Epoch 66/100: valid loss = [11.568366   0.3376579] valid acc = [0.08989999 0.88615   ] 
+Epoch 67/100: valid loss = [11.701228   0.3488707] valid acc = [0.0904     0.88379997] 
+Epoch 68/100: valid loss = [11.54212    0.3401159] valid acc = [0.08989999 0.88745   ] 
+Epoch 69/100: valid loss = [11.416232   0.3429726] valid acc = [0.08975 0.8854 ] 
+Epoch 70/100: valid loss = [11.610425    0.34994525] valid acc = [0.0906     0.88259995] 
+Epoch 71/100: valid loss = [11.593395    0.35656008] valid acc = [0.0898     0.88294995] 
+Epoch 72/100: valid loss = [11.4116      0.33150184] valid acc = [0.09124999 0.88914996] 
+Epoch 73/100: valid loss = [11.489932    0.33324975] valid acc = [0.08944999 0.88725   ] 
+Epoch 74/100: valid loss = [11.611477    0.32853878] valid acc = [0.09065    0.89084995] 
+Epoch 75/100: valid loss = [11.602584   0.3433641] valid acc = [0.091      0.88369995] 
+Epoch 76/100: valid loss = [11.405485    0.32676253] valid acc = [0.09124999 0.8897    ] 
+Epoch 77/100: valid loss = [11.691974    0.32900307] valid acc = [0.09164999 0.88949996] 
+Epoch 78/100: valid loss = [11.886195    0.33008915] valid acc = [0.09124999 0.88965   ] 
+Epoch 79/100: valid loss = [11.756959    0.33424875] valid acc = [0.0918 0.8901] 
+Epoch 80/100: valid loss = [11.342877    0.33915448] valid acc = [0.09225    0.88664997] 
+Epoch 81/100: valid loss = [11.630736    0.32031718] valid acc = [0.09145    0.89274997] 
+Epoch 82/100: valid loss = [11.596968    0.32234251] valid acc = [0.09079999 0.89239997] 
+Epoch 83/100: valid loss = [11.269229   0.3454434] valid acc = [0.0924     0.88224995] 
+Epoch 84/100: valid loss = [11.609509    0.32401797] valid acc = [0.0925  0.88995] 
+Epoch 85/100: valid loss = [11.84804     0.32572082] valid acc = [0.0927     0.89199996] 
+Epoch 86/100: valid loss = [11.950877    0.31925938] valid acc = [0.0927  0.89065] 
+Epoch 87/100: valid loss = [11.280049    0.33676514] valid acc = [0.09195 0.8854 ] 
+Epoch 88/100: valid loss = [11.910024   0.3236601] valid acc = [0.0926     0.89159995] 
+Epoch 89/100: valid loss = [11.678999    0.32294157] valid acc = [0.0907  0.89255] 
+Epoch 90/100: valid loss = [12.042689    0.32793948] valid acc = [0.09185 0.8908 ] 
+Epoch 91/100: valid loss = [11.584225    0.33823445] valid acc = [0.09185    0.88629997] 
+Epoch 92/100: valid loss = [11.870712   0.3292004] valid acc = [0.09209999 0.8907    ] 
+Epoch 93/100: valid loss = [12.092751   0.3219696] valid acc = [0.0939  0.89035] 
+Epoch 94/100: valid loss = [11.717452    0.32625198] valid acc = [0.09415 0.88965] 
+Epoch 95/100: valid loss = [12.089109   0.3164641] valid acc = [0.0933 0.893 ] 
+Epoch 96/100: valid loss = [11.973309    0.31790656] valid acc = [0.09375 0.8936 ] 
+Epoch 97/100: valid loss = [12.239314   0.3183168] valid acc = [0.09384999 0.8926    ] 
+Epoch 98/100: valid loss = [12.24272     0.31833863] valid acc = [0.09305    0.89229995] 
+Epoch 99/100: valid loss = [11.914049  0.319504] valid acc = [0.0929 0.8935] 
+Epoch 100/100: valid loss = [12.23213     0.32477677] valid acc = [0.09235 0.89115] 
